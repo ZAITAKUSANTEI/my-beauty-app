@@ -20,16 +20,17 @@
   .warn{background:#fff9e6; border:1px solid #ffd35c; border-radius:8px; padding:8px; font-size:13px}
 </style>
 
-<!-- 表情の変化率をフロントで計算するためのライブラリ -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<!-- ★★★ MediaPipe FaceMesh をバージョン固定（WASMエラー回避）★★★ -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559617/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559617/face_mesh_solution_packed_assets_loader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1626901312/drawing_utils.js"></script>
+<!-- OpenCV はそのまま -->
 <script src="https://docs.opencv.org/4.8.0/opencv.js" async></script>
 </head>
 <body>
   <h1>美容アプリ（Vision → 独自評価 + 表情変化率 → 施術プラン）</h1>
   <div class="warn">
-    鍵はNetlify Functions側で安全に保持しています。このページは <code>/.netlify/functions/diagnose</code> と <code>/.netlify/functions/plan</code> を呼びます。
+    鍵はFunctions側で保持。このページは <code>/.netlify/functions/diagnose</code> と <code>/.netlify/functions/plan</code> を呼びます。
   </div>
 
   <div class="card">
@@ -65,7 +66,6 @@
 /* -------------------- ユーティリティ -------------------- */
 const el = (id)=>document.getElementById(id);
 
-/* OpenCVロード待ち */
 const cvReady = new Promise((resolve, reject) => {
   const t0 = Date.now();
   (function wait() {
@@ -96,7 +96,9 @@ function fileToBase64(file){
 /* -------------------- 表情変化率（FaceMesh + OpenCV） -------------------- */
 function getFaceLandmarksFromImage(img) {
   return new Promise((resolve, reject) => {
-    const fm = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+    const fm = new FaceMesh({
+      locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559617/${f}`
+    });
     fm.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     fm.onResults(r => {
       const lm = r.multiFaceLandmarks && r.multiFaceLandmarks[0] ? r.multiFaceLandmarks[0] : null;
@@ -200,16 +202,22 @@ el('btnDiag').onclick = async ()=>{
       loadImageAsHTMLImageElement(f3)
     ]);
 
-    // ランドマーク
-    const [lmNeutral, lmOpen, lmClose] = await Promise.all([
-      getFaceLandmarksFromImage(imgNeutral),
-      getFaceLandmarksFromImage(imgOpen),
-      getFaceLandmarksFromImage(imgClose)
-    ]);
-    if(!lmNeutral || !lmOpen || !lmClose) throw new Error("顔のランドマークを検出できませんでした。");
-
-    // 表情の変化率（悪さ0-1）
-    const dyn = dynamicScores({lmNeutral, lmOpen, lmClose}, {imgOpen, imgClose});
+    let dyn = { smoothness_dyn: 0.5, wrinkles_dyn: 0.5, sagging_dyn: 0.5 }; // フォールバック
+    try{
+      // ランドマーク
+      const [lmNeutral, lmOpen, lmClose] = await Promise.all([
+        getFaceLandmarksFromImage(imgNeutral),
+        getFaceLandmarksFromImage(imgOpen),
+        getFaceLandmarksFromImage(imgClose)
+      ]);
+      if(lmNeutral && lmOpen && lmClose){
+        dyn = dynamicScores({lmNeutral, lmOpen, lmClose}, {imgOpen, imgClose});
+      } else {
+        console.warn("FaceMesh landmarks not found. Using fallback dynamic scores.");
+      }
+    }catch(e){
+      console.warn("FaceMesh error (skipped):", e);
+    }
 
     // Netlify Functions（Visionベースの特徴＋スコア）
     const [b1,b2,b3] = await Promise.all([fileToBase64(f1), fileToBase64(f2), fileToBase64(f3)]);
@@ -231,7 +239,7 @@ el('btnDiag').onclick = async ()=>{
     const scores = {
       ...visionDiag.scores,
       wrinkles_score: blend(visionDiag.scores.wrinkles_score, dyn.wrinkles_dyn),
-      sagging_score:  blend(visionDiag.scores.sagging_score,  dyn.sagging_dyn),
+      sagging_score:  blend(visionDiag.scores.sagging_score,  dyn.sagging_dyn)
       // pores_score:    blend(visionDiag.scores.pores_score,    dyn.smoothness_dyn) // 必要なら有効化
     };
 
@@ -295,3 +303,4 @@ el('btnPlan').onclick = async ()=>{
 </script>
 </body>
 </html>
+
