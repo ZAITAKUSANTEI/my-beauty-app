@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>美容アプリ（Netlify Functions 経由）</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>美容アプリ（Netlify Functions 経由 + 表情変化率統合）</title>
 <style>
   :root{--bg:#fafafa;--fg:#111;--muted:#666;--bd:#e5e5e5;}
   body{font-family:system-ui,Segoe UI,Arial; background:var(--bg); color:var(--fg); margin:16px;}
@@ -16,20 +16,30 @@
   button:disabled{opacity:.5; cursor:not-allowed}
   .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
   .muted{color:var(--muted); font-size:13px}
-  pre{white-space:pre-wrap; word-break:break-word; background:#fcfcfc; border:1px solid var(--bd); border-radius:8px; padding:10px; max-height:480px; overflow:auto}
+  pre{white-space:pre-wrap; word-break:break-word; background:#fcfcfc; border:1px solid var(--bd); border-radius:8px; padding:10px; max-height:520px; overflow:auto}
+  .warn{background:#fff9e6; border:1px solid #ffd35c; border-radius:8px; padding:8px; font-size:13px}
 </style>
+
+<!-- 表情の変化率をフロントで計算するためのライブラリ -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://docs.opencv.org/4.8.0/opencv.js" async></script>
 </head>
 <body>
-  <h1>美容アプリ（Vision → 独自基準 → ChatGPT）</h1>
+  <h1>美容アプリ（Vision → 独自評価 + 表情変化率 → 施術プラン）</h1>
+  <div class="warn">
+    鍵はNetlify Functions側で安全に保持しています。このページは <code>/.netlify/functions/diagnose</code> と <code>/.netlify/functions/plan</code> を呼びます。
+  </div>
 
   <div class="card">
     <h2>① 診断</h2>
-    <label>正面写真 <input type="file" id="f1" accept="image/*"></label>
-    <label>左斜位   <input type="file" id="f2" accept="image/*"></label>
-    <label>右斜位   <input type="file" id="f3" accept="image/*"></label>
+    <label>正面（真顔） <input type="file" id="f1" accept="image/*" /></label>
+    <label>目を開いた状態 <input type="file" id="f2" accept="image/*" /></label>
+    <label>目を閉じた状態 <input type="file" id="f3" accept="image/*" /></label>
 
     <div class="row">
-      <label>年齢 <input type="number" id="age" value="41" min="0" max="120"></label>
+      <label>年齢 <input type="number" id="age" value="41" min="0" max="120" /></label>
       <label>性別
         <select id="sex">
           <option value="male">male</option>
@@ -44,15 +54,35 @@
   </div>
 
   <div class="card">
-    <h2>② 施術プラン</h2>
-    <label>主訴（カンマ区切り）<input id="concerns" placeholder="spots, pores"></label>
+    <h2>② 施術プラン（JSON）</h2>
+    <label>主訴（カンマ区切り）<input id="concerns" placeholder="spots, pores, redness" /></label>
     <button id="btnPlan" disabled>プラン作成</button>
     <pre id="out2"></pre>
-    <div class="muted">※ 出力はJSON。UI化は後でカード表示などに差し替え可</div>
+    <div class="muted">※ 後でカードUIに整形可能。現状はJSONのまま表示しています。</div>
   </div>
 
 <script>
-const el = id => document.getElementById(id);
+/* -------------------- ユーティリティ -------------------- */
+const el = (id)=>document.getElementById(id);
+
+/* OpenCVロード待ち */
+const cvReady = new Promise((resolve, reject) => {
+  const t0 = Date.now();
+  (function wait() {
+    if (typeof cv !== "undefined" && cv.Mat) { resolve(); return; }
+    if (Date.now() - t0 > 15000) { reject(new Error("OpenCV load timeout")); return; }
+    setTimeout(wait, 100);
+  })();
+});
+
+function loadImageAsHTMLImageElement(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => { const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = r.result; };
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
 
 function fileToBase64(file){
   return new Promise((resolve,reject)=>{
@@ -63,6 +93,97 @@ function fileToBase64(file){
   });
 }
 
+/* -------------------- 表情変化率（FaceMesh + OpenCV） -------------------- */
+function getFaceLandmarksFromImage(img) {
+  return new Promise((resolve, reject) => {
+    const fm = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+    fm.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    fm.onResults(r => {
+      const lm = r.multiFaceLandmarks && r.multiFaceLandmarks[0] ? r.multiFaceLandmarks[0] : null;
+      resolve(lm);
+    });
+    fm.send({ image: img }).catch(reject);
+  });
+}
+
+function eyeAperture(L, side) {
+  const idx = side === "left"
+    ? { outer: 33, inner: 133, up: 159, down: 145 }
+    : { outer: 362, inner: 263, up: 386, down: 374 };
+  const w = Math.hypot(L[idx.outer].x - L[idx.inner].x, L[idx.outer].y - L[idx.inner].y);
+  const h = Math.hypot(L[idx.up].x - L[idx.down].x, L[idx.up].y - L[idx.down].y);
+  return w * h;
+}
+
+function regionEdgeDensity(img, rect) {
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height;
+  const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0);
+  const x = Math.max(0, Math.floor(rect.x * img.width));
+  const y = Math.max(0, Math.floor(rect.y * img.height));
+  const w = Math.max(1, Math.floor(rect.w * img.width));
+  const h = Math.max(1, Math.floor(rect.h * img.height));
+  const roi = ctx.getImageData(x, y, w, h);
+
+  const src = cv.matFromImageData(roi);
+  let gray = new cv.Mat();
+  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+  let edges = new cv.Mat();
+  cv.Canny(gray, edges, 50, 150);
+  const mean = cv.mean(edges)[0] / 255; // 0-1
+  src.delete(); gray.delete(); edges.delete();
+  return mean;
+}
+
+function sagRatioFromLandmarks(L) {
+  const nose = L[1], chin = L[152], mouthL = L[61], mouthR = L[291];
+  const faceH = (chin.y - nose.y);
+  if (faceH <= 0) return 0.5;
+  const mouthY = (mouthL.y + mouthR.y)/2;
+  return (mouthY - nose.y) / faceH;
+}
+
+function browEyeGap(L, side) {
+  const browIdx = side === "left" ? 105 : 334;
+  const lidIdx  = side === "left" ? 159 : 386;
+  return Math.abs(L[browIdx].y - L[lidIdx].y);
+}
+
+function dynamicScores({lmNeutral, lmOpen, lmClose}, {imgOpen, imgClose}) {
+  // 眼裂面積（open vs close）
+  const apOpen  = (eyeAperture(lmOpen, "left") + eyeAperture(lmOpen, "right"))/2;
+  const apClose = (eyeAperture(lmClose,"left") + eyeAperture(lmClose,"right"))/2;
+  const apertureChange = Math.max(0, (apOpen - apClose) / Math.max(apOpen, 1e-6)); // 0〜1
+
+  // しわ：前額＆目尻のエッジ密度差（open - close）
+  const foreheadRect = {x:0.35, y:0.10, w:0.30, h:0.18};
+  const crowsRectL   = {x:0.18, y:0.36, w:0.14, h:0.12};
+  const crowsRectR   = {x:0.68, y:0.36, w:0.14, h:0.12};
+  const edgeOpen  = (regionEdgeDensity(imgOpen, foreheadRect) + regionEdgeDensity(imgOpen, crowsRectL) + regionEdgeDensity(imgOpen, crowsRectR))/3;
+  const edgeClose = (regionEdgeDensity(imgClose,foreheadRect) + regionEdgeDensity(imgClose,crowsRectL) + regionEdgeDensity(imgClose,crowsRectR))/3;
+  const wrinkleChange = Math.max(0, edgeOpen - edgeClose); // 0〜1想定
+
+  // たるみ：口角下がり＋眉リフト差
+  const sagNeutral = sagRatioFromLandmarks(lmNeutral);
+  const browGapN   = (browEyeGap(lmNeutral,"left")+browEyeGap(lmNeutral,"right"))/2;
+  const browGapO   = (browEyeGap(lmOpen,"left")   +browEyeGap(lmOpen,"right"))/2;
+  const liftDelta  = Math.max(0, (browGapO - browGapN)); // 眉が上がるほどプラス
+
+  // 正規化（0=良→1=悪）
+  const smoothness_dyn = Math.min(1, apertureChange * 1.5); // 良→小、悪→大 → 後で反転
+  const wrinkles_dyn   = Math.min(1, wrinkleChange * 2.0);
+  const sagging_dyn    = Math.min(1, Math.max(0, 0.6*sagNeutral + 0.4*(0.4 - liftDelta)));
+
+  const smooth_bad = 1 - smoothness_dyn;
+
+  return {
+    smoothness_dyn: smooth_bad,
+    wrinkles_dyn,
+    sagging_dyn
+  };
+}
+
+/* -------------------- ① 診断ボタン -------------------- */
 let lastDiag = null;
 
 el('btnDiag').onclick = async ()=>{
@@ -71,24 +192,71 @@ el('btnDiag').onclick = async ()=>{
     const f1 = el('f1').files[0], f2 = el('f2').files[0], f3 = el('f3').files[0];
     if(!f1 || !f2 || !f3) throw new Error("3枚の写真を選択してください。");
 
-    // Base64化（必要ならここでリサイズ処理を追加）
-    const [b1,b2,b3] = await Promise.all([fileToBase64(f1), fileToBase64(f2), fileToBase64(f3)]);
+    await cvReady;
+    // 画像読み込み（FaceMesh用）
+    const [imgNeutral, imgOpen, imgClose] = await Promise.all([
+      loadImageAsHTMLImageElement(f1),
+      loadImageAsHTMLImageElement(f2),
+      loadImageAsHTMLImageElement(f3)
+    ]);
 
+    // ランドマーク
+    const [lmNeutral, lmOpen, lmClose] = await Promise.all([
+      getFaceLandmarksFromImage(imgNeutral),
+      getFaceLandmarksFromImage(imgOpen),
+      getFaceLandmarksFromImage(imgClose)
+    ]);
+    if(!lmNeutral || !lmOpen || !lmClose) throw new Error("顔のランドマークを検出できませんでした。");
+
+    // 表情の変化率（悪さ0-1）
+    const dyn = dynamicScores({lmNeutral, lmOpen, lmClose}, {imgOpen, imgClose});
+
+    // Netlify Functions（Visionベースの特徴＋スコア）
+    const [b1,b2,b3] = await Promise.all([fileToBase64(f1), fileToBase64(f2), fileToBase64(f3)]);
     const age = parseInt(el('age').value,10)||0;
     const sex = el('sex').value;
 
-    // Netlify Functions（サーバ側でVisionを呼ぶ）
     const r = await fetch("/.netlify/functions/diagnose", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ images_b64:[b1,b2,b3], age, sex })
     });
-    const j = await r.json();
-    if(!r.ok) throw new Error(j.error || "diagnose failed");
-    lastDiag = j;
-    el('out1').textContent = JSON.stringify(j, null, 2);
+    const visionDiag = await r.json();
+    if(!r.ok) throw new Error(visionDiag.error || "diagnose failed");
+
+    // 合成（Vision:dyn = 0.5:0.5）
+    const clamp01 = x => Math.max(0, Math.min(1, x));
+    const blend = (a,b)=> clamp01(0.5*a + 0.5*b);
+
+    const scores = {
+      ...visionDiag.scores,
+      wrinkles_score: blend(visionDiag.scores.wrinkles_score, dyn.wrinkles_dyn),
+      sagging_score:  blend(visionDiag.scores.sagging_score,  dyn.sagging_dyn),
+      // pores_score:    blend(visionDiag.scores.pores_score,    dyn.smoothness_dyn) // 必要なら有効化
+    };
+
+    const to5 = (x)=> x<0.2?1 : x<0.4?2 : x<0.6?3 : x<0.8?4 : 5;
+    const grades = {
+      spots_grade:    to5(scores.spots_score),
+      wrinkles_grade: to5(scores.wrinkles_score),
+      sagging_grade:  to5(scores.sagging_score),
+      pores_grade:    to5(scores.pores_score),
+      redness_grade:  to5(scores.redness_score)
+    };
+
+    lastDiag = {
+      age, sex,
+      features: visionDiag.features,
+      scores,
+      grades,
+      dynamic: dyn,
+      comment: visionDiag.comment + "（表情変化率を統合）"
+    };
+
+    el('out1').textContent = JSON.stringify(lastDiag, null, 2);
     el('btnPlan').disabled = false;
   }catch(e){
+    console.error(e);
     el('out1').textContent = "エラー: " + e.message;
     el('btnPlan').disabled = true;
   }finally{
@@ -96,6 +264,7 @@ el('btnDiag').onclick = async ()=>{
   }
 };
 
+/* -------------------- ② プラン作成ボタン -------------------- */
 el('btnPlan').onclick = async ()=>{
   try{
     if(!lastDiag) { alert("先に①診断を実行してください"); return; }
@@ -106,7 +275,8 @@ el('btnPlan').onclick = async ()=>{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
-        age: lastDiag.age, sex: lastDiag.sex,
+        age: lastDiag.age,
+        sex: lastDiag.sex,
         concerns,
         scores: lastDiag.scores,
         grades: lastDiag.grades
@@ -116,6 +286,7 @@ el('btnPlan').onclick = async ()=>{
     if(!r.ok) throw new Error(j.error || "plan failed");
     el('out2').textContent = JSON.stringify(j, null, 2);
   }catch(e){
+    console.error(e);
     el('out2').textContent = "エラー: " + e.message;
   }finally{
     el('btnPlan').disabled = false;

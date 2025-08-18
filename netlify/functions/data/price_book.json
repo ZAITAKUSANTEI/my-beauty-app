@@ -1,0 +1,43 @@
+[
+  { "category":"wrinkles", "name":"ボトックス", "unit":"回", "price_jpy":20000, "intensity":"standard", "target":["表情じわ"], "downtime":"少", "contra":[], "notes":"表情ジワの改善に即効性あり" },
+  { "category":"wrinkles", "name":"ヒアルロン酸注入", "unit":"回", "price_jpy":50000, "intensity":"standard", "target":["ボリュームアップ","しわ"], "downtime":"中", "contra":[], "notes":"ボリュームアップに効果的" },
+  { "category":"wrinkles", "name":"PRP注入", "unit":"回", "price_jpy":60000, "intensity":"standard", "target":["再生治療","しわ"], "downtime":"中", "contra":[], "notes":"自己血液を使った自然な再生治療" },
+  { "category":"wrinkles", "name":"スレッドリフト", "unit":"回", "price_jpy":80000, "intensity":"aggressive", "target":["しわ","たるみ"], "downtime":"中", "contra":[], "notes":"引き上げ効果が高い" },
+  { "category":"wrinkles", "name":"マイクロニードルRF", "unit":"回", "price_jpy":70000, "intensity":"standard", "target":["しわ","肌質改善"], "downtime":"中", "contra":[], "notes":"皮膚深層への刺激でコラーゲン生成" },
+
+  { "category":"sagging", "name":"HIFU", "unit":"回", "price_jpy":90000, "intensity":"aggressive", "target":["たるみ","リフト"], "downtime":"少", "contra":[], "notes":"超音波で筋膜にアプローチ" },
+  { "category":"sagging", "name":"スレッドリフト", "unit":"回", "price_jpy":85000, "intensity":"aggressive", "target":["たるみ","リフト"], "downtime":"中", "contra":[], "notes":"糸による物理的なリフト" },
+  { "category":"sagging", "name":"RF（高周波）", "unit":"回", "price_jpy":60000, "intensity":"standard", "target":["たるみ","引き締め"], "downtime":"少", "contra":[], "notes":"熱による皮膚の引き締め" },
+  { "category":"sagging", "name":"ウルセラ", "unit":"回", "price_jpy":120000, "intensity":"aggressive", "target":["たるみ","リフト"], "downtime":"少", "contra":[], "notes":"FDA認可のたるみ治療" },
+  { "category":"sagging", "name":"サーマクール", "unit":"回", "price_jpy":100000, "intensity":"aggressive", "target":["たるみ","引き締め"], "downtime":"少", "contra":[], "notes":"高周波による深部加熱" },
+
+  { "category":"pores", "name":"フラクショナルCO2レーザー", "unit":"回", "price_jpy":40000, "intensity":"standard", "target":["毛穴","肌再生"], "downtime":"中", "contra":[], "notes":"レーザーで毛穴と皮膚再生を促進" },
+  { "category":"pores", "name":"ダーマペン", "unit":"回", "price_jpy":30000, "intensity":"standard", "target":["毛穴","肌質改善"], "downtime":"中", "contra":[], "notes":"微細針でコラーゲン生成促進" },
+  { "category":"pores", "name":"ポテンツァ", "unit":"回", "price_jpy":80000, "intensity":"aggressive", "target":["毛穴","肌質改善"], "downtime":"中", "contra":[], "notes":"微細針＋高周波で毛穴改善" },
+  { "category":"pores", "name":"ハイドラフェイシャル", "unit":"回", "price_jpy":20000, "intensity":"light", "target":["毛穴","角質除去"], "downtime":"少", "contra":[], "notes":"毛穴と角質のディープクレンジング" },
+  { "category":"pores", "name":"カーボンピーリング", "unit":"回", "price_jpy":25000, "intensity":"light", "target":["毛穴","引き締め"], "downtime":"少", "contra":[], "notes":"炭を用いたピーリングで引き締め" },
+
+  { "category":"redness", "name":"IPL（フォトフェイシャル）", "unit":"回", "price_jpy":35000, "intensity":"standard", "target":["赤み","色ムラ"], "downtime":"少", "contra":[], "notes":"光による赤み・色ムラの改善" },
+  { "category":"redness", "name":"Vビームレーザー", "unit":"回", "price_jpy":45000, "intensity":"standard", "target":["赤ら顔","血管"], "downtime":"少", "contra":[], "notes":"血管に特化した赤ら顔治療" },
+  { "category":"redness", "name":"ロゼックスゲル", "unit":"本", "price_jpy":3000, "intensity":"light", "target":["酒さ","赤ら顔"], "downtime":"なし", "contra":[], "notes":"酒さ・赤ら顔に使用" },
+  { "category":"redness", "name":"赤外線治療", "unit":"回", "price_jpy":15000, "intensity":"light", "target":["赤み","血行促進"], "downtime":"なし", "contra":[], "notes":"赤外線で血行促進" },
+  { "category":"redness", "name":"フラクショナルレーザー", "unit":"回", "price_jpy":60000, "intensity":"standard", "target":["赤み","肌質改善"], "downtime":"中", "contra":[], "notes":"赤みと同時に肌質も改善" },
+
+  { "category":"spots", "name":"トラネキサム酸内服", "unit":"月", "price_jpy":5000, "intensity":"light", "target":["肝斑","色素沈着"], "downtime":"なし", "contra":[], "notes":"肝斑・色素沈着に内服" },
+  { "category":"spots", "name":"レーザートーニング", "unit":"回", "price_jpy":30000, "intensity":"standard", "target":["くすみ","色ムラ"], "downtime":"少", "contra":[], "notes":"レーザーで均一な肌トーンに" },
+  { "category":"spots", "name":"ハイドロキノン", "unit":"本", "price_jpy":4000, "intensity":"light", "target":["しみ"], "downtime":"なし", "contra":[], "notes":"メラニン抑制クリーム" },
+  { "category":"spots", "name":"ルメッカ", "unit":"回", "price_jpy":35000, "intensity":"standard", "target":["しみ","そばかす"], "downtime":"少", "contra":[], "notes":"しみやそばかすの改善" },
+  { "category":"spots", "name":"ピコトーニング", "unit":"回", "price_jpy":45000, "intensity":"standard", "target":["肝斑","くすみ"], "downtime":"少", "contra":[], "notes":"肝斑に適した微弱レーザー" },
+
+  { "category":"pores", "name":"エレクトロポレーション", "unit":"回", "price_jpy":15000, "intensity":"light", "target":["肌質改善","保湿"], "downtime":"なし", "contra":[], "notes":"成分導入による肌質改善" },
+  { "category":"pores", "name":"マッサージピール", "unit":"回", "price_jpy":20000, "intensity":"standard", "target":["肌質改善","美白"], "downtime":"中", "contra":[], "notes":"皮むけを伴うリフト＆美白" },
+  { "category":"pores", "name":"プラズマ治療", "unit":"回", "price_jpy":40000, "intensity":"standard", "target":["殺菌","肌再生"], "downtime":"少", "contra":[], "notes":"殺菌・肌再生効果あり" },
+  { "category":"pores", "name":"エクソソーム導入", "unit":"回", "price_jpy":70000, "intensity":"aggressive", "target":["肌修復","再生"], "downtime":"少", "contra":[], "notes":"幹細胞成分による肌修復" },
+  { "category":"pores", "name":"水光注射", "unit":"回", "price_jpy":30000, "intensity":"standard", "target":["保湿","ツヤ"], "downtime":"少", "contra":[], "notes":"保湿と美容成分注入" },
+
+  { "category":"fat_reduction", "name":"脂肪溶解注射", "unit":"回", "price_jpy":20000, "intensity":"standard", "target":["部分痩身"], "downtime":"少", "contra":[], "notes":"脂肪細胞を直接分解" },
+  { "category":"fat_reduction", "name":"クールスカルプティング", "unit":"回", "price_jpy":90000, "intensity":"standard", "target":["部分痩身"], "downtime":"少", "contra":[], "notes":"冷却で脂肪細胞破壊" },
+  { "category":"fat_reduction", "name":"脂肪吸引", "unit":"回", "price_jpy":300000, "intensity":"aggressive", "target":["外科的痩身"], "downtime":"大", "contra":[], "notes":"外科的な脂肪除去" },
+  { "category":"fat_reduction", "name":"HIFU（脂肪層）", "unit":"回", "price_jpy":100000, "intensity":"aggressive", "target":["部分痩身"], "downtime":"少", "contra":[], "notes":"脂肪層にピンポイント照射" },
+  { "category":"fat_reduction", "name":"カベリン注射", "unit":"回", "price_jpy":25000, "intensity":"standard", "target":["部分痩身"], "downtime":"少", "contra":[], "notes":"植物由来成分の脂肪融解" }
+]
