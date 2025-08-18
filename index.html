@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>美容アプリ（Netlify Functions 経由）</title>
+<style>
+  :root{--bg:#fafafa;--fg:#111;--muted:#666;--bd:#e5e5e5;}
+  body{font-family:system-ui,Segoe UI,Arial; background:var(--bg); color:var(--fg); margin:16px;}
+  h1{font-size:20px;margin:0 0 8px}
+  .card{background:#fff; border:1px solid var(--bd); border-radius:12px; padding:14px; margin:12px 0; box-shadow:0 2px 6px rgba(0,0,0,.04)}
+  label{display:block; margin:8px 0}
+  input,select,button{font-size:16px}
+  input[type="file"]{width:100%}
+  button{padding:10px 14px; border-radius:10px; border:1px solid var(--bd); background:#fff; cursor:pointer}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .muted{color:var(--muted); font-size:13px}
+  pre{white-space:pre-wrap; word-break:break-word; background:#fcfcfc; border:1px solid var(--bd); border-radius:8px; padding:10px; max-height:480px; overflow:auto}
+</style>
+</head>
+<body>
+  <h1>美容アプリ（Vision → 独自基準 → ChatGPT）</h1>
+
+  <div class="card">
+    <h2>① 診断</h2>
+    <label>正面写真 <input type="file" id="f1" accept="image/*"></label>
+    <label>左斜位   <input type="file" id="f2" accept="image/*"></label>
+    <label>右斜位   <input type="file" id="f3" accept="image/*"></label>
+
+    <div class="row">
+      <label>年齢 <input type="number" id="age" value="41" min="0" max="120"></label>
+      <label>性別
+        <select id="sex">
+          <option value="male">male</option>
+          <option value="female">female</option>
+          <option value="other">other</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="btnDiag">診断する</button>
+    <pre id="out1"></pre>
+  </div>
+
+  <div class="card">
+    <h2>② 施術プラン</h2>
+    <label>主訴（カンマ区切り）<input id="concerns" placeholder="spots, pores"></label>
+    <button id="btnPlan" disabled>プラン作成</button>
+    <pre id="out2"></pre>
+    <div class="muted">※ 出力はJSON。UI化は後でカード表示などに差し替え可</div>
+  </div>
+
+<script>
+const el = id => document.getElementById(id);
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = () => resolve((r.result.split(",")[1]) || r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+let lastDiag = null;
+
+el('btnDiag').onclick = async ()=>{
+  try{
+    el('btnDiag').disabled = true; el('out1').textContent = "診断中…";
+    const f1 = el('f1').files[0], f2 = el('f2').files[0], f3 = el('f3').files[0];
+    if(!f1 || !f2 || !f3) throw new Error("3枚の写真を選択してください。");
+
+    // Base64化（必要ならここでリサイズ処理を追加）
+    const [b1,b2,b3] = await Promise.all([fileToBase64(f1), fileToBase64(f2), fileToBase64(f3)]);
+
+    const age = parseInt(el('age').value,10)||0;
+    const sex = el('sex').value;
+
+    // Netlify Functions（サーバ側でVisionを呼ぶ）
+    const r = await fetch("/.netlify/functions/diagnose", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ images_b64:[b1,b2,b3], age, sex })
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error || "diagnose failed");
+    lastDiag = j;
+    el('out1').textContent = JSON.stringify(j, null, 2);
+    el('btnPlan').disabled = false;
+  }catch(e){
+    el('out1').textContent = "エラー: " + e.message;
+    el('btnPlan').disabled = true;
+  }finally{
+    el('btnDiag').disabled = false;
+  }
+};
+
+el('btnPlan').onclick = async ()=>{
+  try{
+    if(!lastDiag) { alert("先に①診断を実行してください"); return; }
+    el('btnPlan').disabled = true; el('out2').textContent = "作成中…";
+    const concerns = el('concerns').value.split(',').map(s=>s.trim()).filter(Boolean);
+
+    const r = await fetch("/.netlify/functions/plan", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        age: lastDiag.age, sex: lastDiag.sex,
+        concerns,
+        scores: lastDiag.scores,
+        grades: lastDiag.grades
+      })
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error || "plan failed");
+    el('out2').textContent = JSON.stringify(j, null, 2);
+  }catch(e){
+    el('out2').textContent = "エラー: " + e.message;
+  }finally{
+    el('btnPlan').disabled = false;
+  }
+};
+</script>
+</body>
+</html>
