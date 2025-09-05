@@ -533,8 +533,7 @@
             <div class="treatment-plans">
                 <h2>あなたへのおすすめ美容プラン</h2>
                 <p class="text-center">AIがあなたの診断結果を元に、最適なプランをご提案します。</p>
-                <div id="planContainer">
-                    </div>
+                <div id="planContainer"></div>
             </div>
 
             <p class="disclaimer"><strong>※本結果は美容目的の参考評価です。医療行為を行うものではありません。</strong><br>個別の治療方針については、必ず専門医にご相談ください。</p>
@@ -551,7 +550,6 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script>
         // API エンドポイント
         const DIAGNOSE_API_URL = '/.netlify/functions/diagnose'; // Netlify Functionsへのパス
@@ -612,69 +610,7 @@
             const allUploaded = uploadedImages.every(img => img !== null);
             diagnoseButton.disabled = !allUploaded;
         }
-
-        // --- 診断ボタンクリック処理 ---
-        diagnoseButton.addEventListener('click', async () => {
-            showLoading('肌データを分析中...');
-
-            const age = document.getElementById('ageInput').value;
-            const sex = document.getElementById('sexInput').value;
-
-            try {
-                // STEP 1: 肌診断 API を呼び出す
-                const diagnoseResponse = await fetch(DIAGNOSE_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        images_b64: uploadedImages,
-                        age: parseInt(age),
-                        sex: sex
-                    })
-                });
-
-                if (!diagnoseResponse.ok) {
-                    const errorData = await diagnoseResponse.json();
-                    throw new Error(`診断エラー: ${errorData.error || diagnoseResponse.statusText}`);
-                }
-                const diagnoseData = await diagnoseResponse.json();
-                console.log("診断結果:", diagnoseData);
-
-                // --- 診断結果の表示 ---
-                displayDiagnosisResults(diagnoseData.scores, diagnoseData.analysis_info);
-
-                // STEP 2: 美容プラン API を呼び出す
-                showLoading('あなたに最適なプランを生成中...');
-                const planResponse = await fetch(PLAN_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        age: parseInt(age),
-                        sex: sex,
-                        scores: diagnoseData.scores // diagnose.jsから受け取ったスコアをそのまま渡す
-                    })
-                });
-
-                if (!planResponse.ok) {
-                    const errorData = await planResponse.json();
-                    throw new Error(`プラン生成エラー: ${errorData.error || planResponse.statusText}`);
-                }
-                const planData = await planResponse.json();
-                console.log("プラン結果:", planData);
-
-                // --- プラン結果の表示 ---
-                displayTreatmentPlans(planData.plans);
-
-                hideLoading();
-                resultsSection.classList.remove('hidden');
-                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
-
-            } catch (error) {
-                console.error('診断またはプラン生成中にエラーが発生しました:', error);
-                alert(`エラーが発生しました: ${error.message}\nもう一度お試しください。`);
-                hideLoading();
-            }
-        });
-
+        
         // --- 診断結果表示ロジック ---
         function displayDiagnosisResults(scores, analysisInfo) {
             document.getElementById('overallScore').textContent = scores.overall;
@@ -685,12 +621,12 @@
             document.getElementById('rednessScore').textContent = scores.redness;
 
             // 各スコアの簡単な説明とAI分析補足
-            document.getElementById('overallComment').textContent = getOverallComment(scores.overall);
-            document.getElementById('spotsDesc').textContent = getScoreDescription('spots', scores.spots, analysisInfo);
-            document.getElementById('wrinklesDesc').textContent = getScoreDescription('wrinkles', scores.wrinkles, analysisInfo);
-            document.getElementById('saggingDesc').textContent = getScoreDescription('sagging', scores.sagging, analysisInfo);
-            document.getElementById('poresDesc').textContent = getScoreDescription('pores', scores.pores, analysisInfo);
-            document.getElementById('rednessDesc').textContent = getScoreDescription('redness', scores.redness, analysisInfo);
+            document.getElementById('overallComment').innerHTML = getOverallComment(scores.overall);
+            document.getElementById('spotsDesc').innerHTML = getScoreDescription('spots', scores.spots, analysisInfo);
+            document.getElementById('wrinklesDesc').innerHTML = getScoreDescription('wrinkles', scores.wrinkles, analysisInfo);
+            document.getElementById('saggingDesc').innerHTML = getScoreDescription('sagging', scores.sagging, analysisInfo);
+            document.getElementById('poresDesc').innerHTML = getScoreDescription('pores', scores.pores, analysisInfo);
+            document.getElementById('rednessDesc').innerHTML = getScoreDescription('redness', scores.redness, analysisInfo);
 
             // レーダーチャートの更新
             updateRadarChart(scores);
@@ -707,7 +643,7 @@
 
         // 各項目スコアの詳細説明
         function getScoreDescription(category, score, analysisInfo) {
-            const { name, desc, ideal, targetScore } = scoreCategories[category];
+            const { name, desc, ideal } = scoreCategories[category];
             let comment = `<strong>${name}スコア: ${score}点</strong><br>${desc}`;
 
             if (score >= 80) {
@@ -780,12 +716,15 @@
                                 grid: { color: '#eee' },
                                 pointLabels: {
                                     font: { size: window.innerWidth > 768 ? 14 : 10, family: 'Noto Sans JP' },
-                                    color: var(--dark-bg)
+                                    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                                    // ★★★ ここが修正点です ★★★
+                                    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                                    color: '#2c3e50'
                                 },
-                                suggestedMin: 0, // 最低スコアに合わせて調整
+                                suggestedMin: 30, // 最低スコアに合わせて調整
                                 suggestedMax: 100, // 最高スコアに合わせて調整
                                 ticks: {
-                                    stepSize: 20,
+                                    stepSize: 10,
                                     backdropColor: 'rgba(255, 255, 255, 0.7)',
                                     color: '#666'
                                 }
@@ -811,37 +750,126 @@
             }
         }
 
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここから下の2つの関数を、まるごと新しいものに差し替えます ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        
         // --- プラン表示ロジック ---
-        function displayTreatmentPlans(plans) {
+        function displayTreatmentPlans(planData) {
             planContainer.innerHTML = ''; // 既存のプランをクリア
 
-            plans.forEach(plan => {
-                const planCard = document.createElement('div');
-                planCard.classList.add('plan-card');
+            const planLevels = [
+                { key: 'light',      title: 'ライトプラン' },
+                { key: 'standard',   title: 'スタンダードプラン' },
+                { key: 'aggressive', title: 'アグレッシブプラン' }
+            ];
 
-                let treatmentsHtml = '';
-                let totalCost = 0;
+            planLevels.forEach(level => {
+                // planDataに該当するプラン(light, standardなど)が存在し、中身が空でないことを確認
+                if (planData[level.key] && planData[level.key].length > 0) {
+                    const treatments = planData[level.key];
+                    const planCard = document.createElement('div');
+                    planCard.classList.add('plan-card');
 
-                plan.treatments.forEach(treatment => {
-                    treatmentsHtml += `
-                        <li>
-                            <span>${treatment.name_jp}</span>
-                            <strong>${treatment.price.toLocaleString()}円</strong>
-                        </li>
+                    let treatmentsHtml = '<ul>';
+                    let totalCost = 0;
+
+                    treatments.forEach(treatment => {
+                        const price = treatment.price_jpy || 0;
+                        const sessions = treatment.sessions || 1;
+                        const total = price * sessions;
+                        treatmentsHtml += `
+                            <li>
+                                <span>${treatment.name} (${sessions}${treatment.unit})</span>
+                                <strong>${total.toLocaleString()}円</strong>
+                            </li>
+                        `;
+                        totalCost += total;
+                    });
+                    treatmentsHtml += '</ul>';
+
+                    // 理由を追記
+                    const reasonHtml = treatments.map(t => t.reason).filter(r => r).map(r => `<li>${r}</li>`).join('');
+
+                    planCard.innerHTML = `
+                        <h3>${level.title}</h3>
+                        <h4>提案理由:</h4>
+                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 0.9em;">${reasonHtml || '<li>総合的なスコアバランスを考慮して選定しました。</li>'}</ul>
+                        <h4>おすすめ施術内容:</h4>
+                        ${treatmentsHtml}
+                        <p class="plan-total">合計費用目安: ${totalCost.toLocaleString()}円</p>
                     `;
-                    totalCost += treatment.price;
+                    planContainer.appendChild(planCard);
+                }
+            });
+
+            // 総合的な注意書き(notes)を表示
+            if (planData.notes) {
+                const notesEl = document.createElement('div');
+                notesEl.className = 'plan-card'; // 同じスタイルを適用
+                notesEl.innerHTML = `<h3>補足事項</h3><p>${planData.notes.replace(/\n/g, '<br>')}</p>`;
+                planContainer.appendChild(notesEl);
+            }
+        }
+
+        // --- 診断ボタンクリック処理 ---
+        diagnoseButton.addEventListener('click', async () => {
+            showLoading('肌データを分析中...');
+
+            const age = document.getElementById('ageInput').value;
+            const sex = document.getElementById('sexInput').value;
+
+            try {
+                // STEP 1: 肌診断 API を呼び出す
+                const diagnoseResponse = await fetch(DIAGNOSE_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        images_b64: uploadedImages,
+                        age: parseInt(age),
+                        sex: sex
+                    })
                 });
 
-                planCard.innerHTML = `
-                    <h3>${plan.level_jp}プラン (${plan.level})</h3>
-                    <p>${plan.description_jp}</p>
-                    <h4>おすすめ施術内容:</h4>
-                    <ul>${treatmentsHtml}</ul>
-                    <p class="plan-total">合計費用: ${totalCost.toLocaleString()}円</p>
-                `;
-                planContainer.appendChild(planCard);
-            });
-        }
+                if (!diagnoseResponse.ok) {
+                    const errorData = await diagnoseResponse.json();
+                    throw new Error(`診断エラー: ${errorData.error || diagnoseResponse.statusText}`);
+                }
+                const diagnoseData = await diagnoseResponse.json();
+                
+                displayDiagnosisResults(diagnoseData.scores, diagnoseData.analysis_info);
+
+                // STEP 2: 美容プラン API を呼び出す
+                showLoading('あなたに最適なプランを生成中...');
+                const planResponse = await fetch(PLAN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        age: parseInt(age),
+                        sex: sex,
+                        scores: diagnoseData.scores
+                    })
+                });
+
+                if (!planResponse.ok) {
+                    const errorData = await planResponse.json();
+                    throw new Error(`プラン生成エラー: ${errorData.error || planResponse.statusText}`);
+                }
+                const planData = await planResponse.json();
+
+                // プラン結果の表示（planDataをそのまま渡す）
+                displayTreatmentPlans(planData);
+
+                hideLoading();
+                resultsSection.classList.remove('hidden');
+                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (error) {
+                console.error('診断またはプラン生成中にエラーが発生しました:', error);
+                alert(`エラーが発生しました: ${error.message}\nもう一度お試しください。`);
+                hideLoading();
+            }
+        });
 
 
         // --- ローディング表示の制御 ---
