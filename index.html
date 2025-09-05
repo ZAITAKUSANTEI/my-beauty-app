@@ -142,19 +142,6 @@
             color: #aaa;
             margin-bottom: 0.8rem;
         }
-        .image-preview-card button {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background-color 0.3s ease;
-        }
-        .image-preview-card button:hover {
-            background-color: #d32f2f;
-        }
 
         .user-info {
             display: flex;
@@ -253,8 +240,8 @@
             padding: 1.5rem;
             box-shadow: var(--shadow-light);
             min-width: 180px;
-            flex: 1; /* フレックスアイテムとして均等に幅を割り振る */
-            max-width: 250px; /* ある程度の最大幅 */
+            flex: 1; 
+            max-width: 250px;
             text-align: center;
             position: relative;
         }
@@ -379,52 +366,20 @@
 
         /* --- Responsive Design --- */
         @media (max-width: 768px) {
-            header h1 {
-                font-size: 1.8rem;
-            }
-            .container {
-                margin: 1rem auto;
-                padding: 0 1rem;
-            }
-            section {
-                padding: 1.5rem;
-            }
-            .image-preview-card {
-                width: 100%; /* モバイルでは全幅 */
-                max-width: 350px; /* 中央寄せのために最大幅も設定 */
-                margin-left: auto;
-                margin-right: auto;
-            }
-            .score-display {
-                flex-direction: column; /* モバイルでは縦並び */
-                align-items: center;
-            }
-            .score-card {
-                width: 90%;
-                max-width: 300px;
-            }
-            .score-card.overall .score-value {
-                font-size: 3rem;
-            }
-            .radar-chart-container {
-                padding: 1rem;
-            }
-            .plan-card h3 {
-                font-size: 1.2rem;
-            }
+            header h1 { font-size: 1.8rem; }
+            .container { margin: 1rem auto; padding: 0 1rem; }
+            section { padding: 1.5rem; }
+            .image-preview-card { width: 100%; max-width: 350px; margin-left: auto; margin-right: auto; }
+            .score-display { flex-direction: column; align-items: center; }
+            .score-card { width: 90%; max-width: 300px; }
+            .score-card.overall .score-value { font-size: 3rem; }
+            .radar-chart-container { padding: 1rem; }
+            .plan-card h3 { font-size: 1.2rem; }
         }
         @media (max-width: 480px) {
-            header h1 {
-                font-size: 1.5rem;
-            }
-            .btn-primary {
-                padding: 12px 25px;
-                font-size: 1rem;
-            }
-            .file-input-wrapper .btn {
-                padding: 10px 20px;
-                font-size: 0.9rem;
-            }
+            header h1 { font-size: 1.5rem; }
+            .btn-primary { padding: 12px 25px; font-size: 1rem; }
+            .file-input-wrapper .btn { padding: 10px 20px; font-size: 0.9rem; }
         }
     </style>
 </head>
@@ -546,16 +501,16 @@
     </div>
 
     <footer>
-        <p>&copy; 2023 AI Beauty App. All rights reserved.</p>
+        <p>&copy; 2025 AI Beauty App. All rights reserved.</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // API エンドポイント
-        const DIAGNOSE_API_URL = '/.netlify/functions/diagnose'; // Netlify Functionsへのパス
-        const PLAN_API_URL = '/.netlify/functions/plan';       // Netlify Functionsへのパス
+        const DIAGNOSE_API_URL = '/.netlify/functions/diagnose';
+        const PLAN_API_URL = '/.netlify/functions/plan';
 
-        let uploadedImages = [null, null, null]; // base64画像を格納
+        let uploadedImages = [null, null, null];
         const imagePreviews = [
             document.getElementById('image-preview-0'),
             document.getElementById('image-preview-1'),
@@ -572,20 +527,17 @@
         const resultsSection = document.getElementById('resultsSection');
         const planContainer = document.getElementById('planContainer');
 
-        // Chart.jsのレーダーチャートインスタンス
         let skinRadarChart;
 
-        // スコア項目と日本語名、解説マッピング
         const scoreCategories = {
-            overall: { name: "総合美肌スコア", desc: "あなたの肌全体の状態を示す総合的な指標です。バランスの取れたケアで美しさを維持しましょう。", targetScore: 60 },
-            spots:   { name: "シミ・透明感", desc: "肌の色ムラやシミの現れやすさを示します。高いほど透明感のある均一な肌です。", ideal: "高い透明感、均一な肌", targetScore: 60 },
-            wrinkles:{ name: "シワ・なめらかさ", desc: "肌の表面の滑らかさと弾力性を評価します。高いほど小ジワが少なく、ハリがあります。", ideal: "小ジワが少なく滑らか", targetScore: 60 },
-            sagging: { name: "たるみ・ハリ", desc: "肌の弾力とリフトアップの状態を示します。高いほどフェイスラインが引き締まっています。", ideal: "引き締まったフェイスライン", targetScore: 60 },
-            pores:   { name: "毛穴・キメ", desc: "毛穴の目立ちにくさと肌のキメの細かさを示します。高いほどキメが整い、毛穴が目立ちません。", ideal: "キメが整い毛穴が目立たない", targetScore: 60 },
-            redness: { name: "赤み・色ムラ", desc: "肌の赤みや炎症の傾向、色ムラの少なさを示します。高いほど鎮静され均一な肌色です。", ideal: "均一な肌色、赤みなし", targetScore: 60 }
+            overall: { name: "総合美肌スコア", desc: "あなたの肌全体の状態を示す総合的な指標です。バランスの取れたケアで美しさを維持しましょう。" },
+            spots:   { name: "シミ・透明感", desc: "肌の色ムラやシミの現れやすさを示します。高いほど透明感のある均一な肌です。", ideal: "高い透明感、均一な肌" },
+            wrinkles:{ name: "シワ・なめらかさ", desc: "肌の表面の滑らかさと弾力性を評価します。高いほど小ジワが少なく、ハリがあります。", ideal: "小ジワが少なく滑らか" },
+            sagging: { name: "たるみ・ハリ", desc: "肌の弾力とリフトアップの状態を示します。高いほどフェイスラインが引き締まっています。", ideal: "引き締まったフェイスライン" },
+            pores:   { name: "毛穴・キメ", desc: "毛穴の目立ちにくさと肌のキメの細かさを示します。高いほどキメが整い、毛穴が目立ちません。", ideal: "キメが整い毛穴が目立たない" },
+            redness: { name: "赤み・色ムラ", desc: "肌の赤みや炎症の傾向、色ムラの少なさを示します。高いほど鎮静され均一な肌色です。", ideal: "均一な肌色、赤みなし" }
         };
 
-        // --- 画像アップロード処理 ---
         function handleImageUpload(event, index) {
             const file = event.target.files[0];
             if (file) {
@@ -594,15 +546,10 @@
                     imagePreviews[index].src = e.target.result;
                     imagePreviews[index].classList.remove('hidden');
                     placeholders[index].classList.add('hidden');
-                    uploadedImages[index] = e.target.result.split(',')[1]; // base64データ部分のみを保存
+                    uploadedImages[index] = e.target.result.split(',')[1];
                     checkAllImagesUploaded();
                 };
                 reader.readAsDataURL(file);
-            } else {
-                imagePreviews[index].classList.add('hidden');
-                placeholders[index].classList.remove('hidden');
-                uploadedImages[index] = null;
-                checkAllImagesUploaded();
             }
         }
 
@@ -610,209 +557,10 @@
             const allUploaded = uploadedImages.every(img => img !== null);
             diagnoseButton.disabled = !allUploaded;
         }
-        
-        // --- 診断結果表示ロジック ---
-        function displayDiagnosisResults(scores, analysisInfo) {
-            document.getElementById('overallScore').textContent = scores.overall;
-            document.getElementById('spotsScore').textContent = scores.spots;
-            document.getElementById('wrinklesScore').textContent = scores.wrinkles;
-            document.getElementById('saggingScore').textContent = scores.sagging;
-            document.getElementById('poresScore').textContent = scores.pores;
-            document.getElementById('rednessScore').textContent = scores.redness;
 
-            // 各スコアの簡単な説明とAI分析補足
-            document.getElementById('overallComment').innerHTML = getOverallComment(scores.overall);
-            document.getElementById('spotsDesc').innerHTML = getScoreDescription('spots', scores.spots, analysisInfo);
-            document.getElementById('wrinklesDesc').innerHTML = getScoreDescription('wrinkles', scores.wrinkles, analysisInfo);
-            document.getElementById('saggingDesc').innerHTML = getScoreDescription('sagging', scores.sagging, analysisInfo);
-            document.getElementById('poresDesc').innerHTML = getScoreDescription('pores', scores.pores, analysisInfo);
-            document.getElementById('rednessDesc').innerHTML = getScoreDescription('redness', scores.redness, analysisInfo);
-
-            // レーダーチャートの更新
-            updateRadarChart(scores);
-        }
-
-        // 総合スコアのコメント生成
-        function getOverallComment(score) {
-            if (score >= 85) return "素晴らしいです！非常に健康的で美しい肌状態を保っています。この調子で維持していきましょう！";
-            if (score >= 70) return "良好な肌状態です！日々のケアが実を結んでいます。更なる高みを目指しましょう。";
-            if (score >= 50) return "平均的な肌状態です。少しの意識とケアで、もっと美しくなれます。";
-            if (score >= 30) return "肌トラブルの兆候が見られます。この機会に集中的なケアを検討してみませんか？";
-            return "現在、肌の分析が困難な状況です。再撮影をおすすめします。";
-        }
-
-        // 各項目スコアの詳細説明
-        function getScoreDescription(category, score, analysisInfo) {
-            const { name, desc, ideal } = scoreCategories[category];
-            let comment = `<strong>${name}スコア: ${score}点</strong><br>${desc}`;
-
-            if (score >= 80) {
-                comment += `<br>非常に良好です！${ideal}な状態を保っています。`;
-            } else if (score >= 60) {
-                comment += `<br>良好な状態です。さらなる改善も期待できます。`;
-            } else if (score >= 40) {
-                comment += `<br>平均よりやや低めです。この項目に特化したケアを検討してみましょう。`;
-            } else { // 30-39点
-                comment += `<br>改善の余地が大きい項目です。集中的なケアをおすすめします。`;
-            }
-
-            // 分析の信頼性に関する補足（必要に応じて）
-            if (analysisInfo && analysisInfo.detection_confidence < 0.7) {
-                comment += `<br><small>※顔の検出精度が低かったため、診断の信頼性に影響がある可能性があります。</small>`;
-            }
-            if (analysisInfo && analysisInfo.is_face_tilted) {
-                comment += `<br><small>※写真に顔の傾きが見られたため、正確な分析が難しい箇所がありました。</small>`;
-            }
-            return comment;
-        }
-
-
-        // レーダーチャート描画/更新
-        function updateRadarChart(scores) {
-            const labels = [
-                scoreCategories.spots.name,
-                scoreCategories.wrinkles.name,
-                scoreCategories.sagging.name,
-                scoreCategories.pores.name,
-                scoreCategories.redness.name
-            ];
-            const data = [
-                scores.spots,
-                scores.wrinkles,
-                scores.sagging,
-                scores.pores,
-                scores.redness
-            ];
-
-            const ctx = document.getElementById('skinRadarChart').getContext('2d');
-
-            if (skinRadarChart) {
-                skinRadarChart.data.labels = labels;
-                skinRadarChart.data.datasets[0].data = data;
-                skinRadarChart.update();
-            } else {
-                skinRadarChart = new Chart(ctx, {
-                    type: 'radar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'あなたの肌スコア',
-                            data: data,
-                            backgroundColor: 'rgba(75, 192, 192, 0.4)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 2,
-                            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                            pointBorderColor: '#fff',
-                            pointHoverBackgroundColor: '#fff',
-                            pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        scales: {
-                            r: {
-                                angleLines: { display: true, color: '#eee' },
-                                grid: { color: '#eee' },
-                                pointLabels: {
-                                    font: { size: window.innerWidth > 768 ? 14 : 10, family: 'Noto Sans JP' },
-                                    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                                    // ★★★ ここが修正点です ★★★
-                                    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                                    color: '#2c3e50'
-                                },
-                                suggestedMin: 30, // 最低スコアに合わせて調整
-                                suggestedMax: 100, // 最高スコアに合わせて調整
-                                ticks: {
-                                    stepSize: 10,
-                                    backdropColor: 'rgba(255, 255, 255, 0.7)',
-                                    color: '#666'
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false // 凡例は非表示
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) label += ': ';
-                                        label += Math.round(context.parsed.r) + '点';
-                                        return label;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ここから下の2つの関数を、まるごと新しいものに差し替えます ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        
-        // --- プラン表示ロジック ---
-        function displayTreatmentPlans(planData) {
-            planContainer.innerHTML = ''; // 既存のプランをクリア
-
-            const planLevels = [
-                { key: 'light',      title: 'ライトプラン' },
-                { key: 'standard',   title: 'スタンダードプラン' },
-                { key: 'aggressive', title: 'アグレッシブプラン' }
-            ];
-
-            planLevels.forEach(level => {
-                // planDataに該当するプラン(light, standardなど)が存在し、中身が空でないことを確認
-                if (planData[level.key] && planData[level.key].length > 0) {
-                    const treatments = planData[level.key];
-                    const planCard = document.createElement('div');
-                    planCard.classList.add('plan-card');
-
-                    let treatmentsHtml = '<ul>';
-                    let totalCost = 0;
-
-                    treatments.forEach(treatment => {
-                        const price = treatment.price_jpy || 0;
-                        const sessions = treatment.sessions || 1;
-                        const total = price * sessions;
-                        treatmentsHtml += `
-                            <li>
-                                <span>${treatment.name} (${sessions}${treatment.unit})</span>
-                                <strong>${total.toLocaleString()}円</strong>
-                            </li>
-                        `;
-                        totalCost += total;
-                    });
-                    treatmentsHtml += '</ul>';
-
-                    // 理由を追記
-                    const reasonHtml = treatments.map(t => t.reason).filter(r => r).map(r => `<li>${r}</li>`).join('');
-
-                    planCard.innerHTML = `
-                        <h3>${level.title}</h3>
-                        <h4>提案理由:</h4>
-                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 0.9em;">${reasonHtml || '<li>総合的なスコアバランスを考慮して選定しました。</li>'}</ul>
-                        <h4>おすすめ施術内容:</h4>
-                        ${treatmentsHtml}
-                        <p class="plan-total">合計費用目安: ${totalCost.toLocaleString()}円</p>
-                    `;
-                    planContainer.appendChild(planCard);
-                }
-            });
-
-            // 総合的な注意書き(notes)を表示
-            if (planData.notes) {
-                const notesEl = document.createElement('div');
-                notesEl.className = 'plan-card'; // 同じスタイルを適用
-                notesEl.innerHTML = `<h3>補足事項</h3><p>${planData.notes.replace(/\n/g, '<br>')}</p>`;
-                planContainer.appendChild(notesEl);
-            }
-        }
-
-        // --- 診断ボタンクリック処理 ---
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ このブロックが前回抜け落ちていました ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         diagnoseButton.addEventListener('click', async () => {
             showLoading('肌データを分析中...');
 
@@ -856,8 +604,7 @@
                     throw new Error(`プラン生成エラー: ${errorData.error || planResponse.statusText}`);
                 }
                 const planData = await planResponse.json();
-
-                // プラン結果の表示（planDataをそのまま渡す）
+                
                 displayTreatmentPlans(planData);
 
                 hideLoading();
@@ -871,8 +618,150 @@
             }
         });
 
+        function displayDiagnosisResults(scores, analysisInfo) {
+            document.getElementById('overallScore').textContent = scores.overall;
+            document.getElementById('spotsScore').textContent = scores.spots;
+            document.getElementById('wrinklesScore').textContent = scores.wrinkles;
+            document.getElementById('saggingScore').textContent = scores.sagging;
+            document.getElementById('poresScore').textContent = scores.pores;
+            document.getElementById('rednessScore').textContent = scores.redness;
 
-        // --- ローディング表示の制御 ---
+            document.getElementById('overallComment').innerHTML = getOverallComment(scores.overall);
+            document.getElementById('spotsDesc').innerHTML = getScoreDescription('spots', scores.spots, analysisInfo);
+            document.getElementById('wrinklesDesc').innerHTML = getScoreDescription('wrinkles', scores.wrinkles, analysisInfo);
+            document.getElementById('saggingDesc').innerHTML = getScoreDescription('sagging', scores.sagging, analysisInfo);
+            document.getElementById('poresDesc').innerHTML = getScoreDescription('pores', scores.pores, analysisInfo);
+            document.getElementById('rednessDesc').innerHTML = getScoreDescription('redness', scores.redness, analysisInfo);
+
+            updateRadarChart(scores);
+        }
+
+        function getOverallComment(score) {
+            if (score >= 85) return "素晴らしいです！非常に健康的で美しい肌状態を保っています。この調子で維持していきましょう！";
+            if (score >= 70) return "良好な肌状態です！日々のケアが実を結んでいます。更なる高みを目指しましょう。";
+            if (score >= 50) return "平均的な肌状態です。少しの意識とケアで、もっと美しくなれます。";
+            return "肌トラブルの兆候が見られます。この機会に集中的なケアを検討してみませんか？";
+        }
+
+        function getScoreDescription(category, score, analysisInfo) {
+            const { name, desc, ideal } = scoreCategories[category];
+            let comment = `<strong>${name}スコア: ${score}点</strong><br>${desc}`;
+
+            if (score >= 80) comment += `<br>非常に良好です！${ideal}な状態を保っています。`;
+            else if (score >= 60) comment += `<br>良好な状態です。さらなる改善も期待できます。`;
+            else if (score >= 40) comment += `<br>平均よりやや低めです。この項目に特化したケアを検討してみましょう。`;
+            else comment += `<br>改善の余地が大きい項目です。集中的なケアをおすすめします。`;
+            
+            if (analysisInfo && analysisInfo.detection_confidence < 0.7) comment += `<br><small>※顔の検出精度が低かったため、診断の信頼性に影響がある可能性があります。</small>`;
+            if (analysisInfo && analysisInfo.is_face_tilted) comment += `<br><small>※写真に顔の傾きが見られたため、正確な分析が難しい箇所がありました。</small>`;
+            
+            return comment;
+        }
+
+        function updateRadarChart(scores) {
+            const labels = [
+                scoreCategories.spots.name, scoreCategories.wrinkles.name, scoreCategories.sagging.name,
+                scoreCategories.pores.name, scoreCategories.redness.name
+            ];
+            const data = [
+                scores.spots, scores.wrinkles, scores.sagging, scores.pores, scores.redness
+            ];
+            const ctx = document.getElementById('skinRadarChart').getContext('2d');
+
+            if (skinRadarChart) {
+                skinRadarChart.data.datasets[0].data = data;
+                skinRadarChart.update();
+            } else {
+                skinRadarChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'あなたの肌スコア',
+                            data: data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.4)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: true,
+                        scales: {
+                            r: {
+                                angleLines: { display: true, color: '#eee' },
+                                grid: { color: '#eee' },
+                                pointLabels: {
+                                    font: { size: window.innerWidth > 768 ? 14 : 10, family: 'Noto Sans JP' },
+                                    color: '#2c3e50'
+                                },
+                                suggestedMin: 30,
+                                suggestedMax: 100,
+                                ticks: { stepSize: 10, backdropColor: 'rgba(255, 255, 255, 0.7)', color: '#666' }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) { return (context.dataset.label || '') + ': ' + Math.round(context.parsed.r) + '点'; }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function displayTreatmentPlans(planData) {
+            planContainer.innerHTML = '';
+            const planLevels = [
+                { key: 'light',      title: 'ライトプラン' },
+                { key: 'standard',   title: 'スタンダードプラン' },
+                { key: 'aggressive', title: 'アグレッシブプラン' }
+            ];
+
+            planLevels.forEach(level => {
+                if (planData[level.key] && planData[level.key].length > 0) {
+                    const treatments = planData[level.key];
+                    const planCard = document.createElement('div');
+                    planCard.classList.add('plan-card');
+                    let treatmentsHtml = '<ul>';
+                    let totalCost = 0;
+
+                    treatments.forEach(treatment => {
+                        const price = treatment.price_jpy || 0;
+                        const sessions = treatment.sessions || 1;
+                        const total = price * sessions;
+                        treatmentsHtml += `<li><span>${treatment.name} (${sessions}${treatment.unit})</span><strong>${total.toLocaleString()}円</strong></li>`;
+                        totalCost += total;
+                    });
+                    treatmentsHtml += '</ul>';
+
+                    const reasonHtml = treatments.map(t => t.reason).filter(r => r).map(r => `<li>${r}</li>`).join('');
+
+                    planCard.innerHTML = `
+                        <h3>${level.title}</h3>
+                        <h4>提案理由:</h4>
+                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 0.9em;">${reasonHtml || '<li>総合的なスコアバランスを考慮して選定しました。</li>'}</ul>
+                        <h4>おすすめ施術内容:</h4>
+                        ${treatmentsHtml}
+                        <p class="plan-total">合計費用目安: ${totalCost.toLocaleString()}円</p>`;
+                    planContainer.appendChild(planCard);
+                }
+            });
+
+            if (planData.notes) {
+                const notesEl = document.createElement('div');
+                notesEl.className = 'plan-card';
+                notesEl.innerHTML = `<h3>補足事項</h3><p>${planData.notes.replace(/\n/g, '<br>')}</p>`;
+                planContainer.appendChild(notesEl);
+            }
+        }
+
         function showLoading(message) {
             loadingMessage.textContent = message;
             loadingOverlay.classList.remove('hidden');
@@ -882,11 +771,9 @@
             loadingOverlay.classList.add('hidden');
         }
 
-        // 初期ロード時の状態確認
         document.addEventListener('DOMContentLoaded', () => {
             checkAllImagesUploaded();
         });
-
     </script>
 </body>
 </html>
