@@ -1,4 +1,13 @@
 // netlify/functions/diagnose.js
+
+// --- 変更点(1): 新しいスコア計算関数を追加 ---
+// 0-1の元スコア(1に近いほど悪い)を、30-100点(100に近いほど良い)に変換
+function toNewScore(originalScore) {
+  const goodnessScore = 1 - originalScore; // スコアを反転
+  const scaledScore = 30 + Math.pow(goodnessScore, 1.2) * 70; // 30-100点にスケール変換し、平均を調整
+  return Math.round(scaledScore);
+}
+
 exports.handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") {
@@ -15,7 +24,7 @@ exports.handler = async (event) => {
         image: { content: b64 },
         features: [
           { type: "IMAGE_PROPERTIES", maxResults: 1 },
-          { type: "FACE_DETECTION",   maxResults: 5 }
+          { type: "FACE_DETECTION",   maxResults: 1 } // 1人の顔に限定
         ]
       }))
     };
@@ -29,10 +38,11 @@ exports.handler = async (event) => {
     }
     const data = await vres.json();
 
-    // 特徴量抽出（簡易）
+    // 特徴量抽出
     const responses = data.responses || [];
-    const brightnessVals = [], rRatios = [];
+    const brightnessVals = [], rRatios = [], faceAnnotations = [];
     for (const rep of responses) {
+      // 色情報の抽出
       const colors = rep?.imagePropertiesAnnotation?.dominantColors?.colors || [];
       if (colors.length) {
         const c = colors[0].color || {};
@@ -41,37 +51,67 @@ exports.handler = async (event) => {
         brightnessVals.push(bright);
         rRatios.push(r / Math.max(1, r+g+b));
       }
+      // --- 変更点(2): 顔検出データを取得 ---
+      if (rep.faceAnnotations && rep.faceAnnotations.length > 0) {
+        faceAnnotations.push(rep.faceAnnotations[0]);
+      }
     }
+
+    // --- 変更点(3): 顔検出データを使って信頼性チェック ---
+    let detectionConfidence = 1.0;
+    let isFaceTilted = false;
+    if (faceAnnotations.length === 3) {
+        const avgConfidence = avg(faceAnnotations.map(fa => fa.detectionConfidence));
+        detectionConfidence = avgConfidence;
+
+        const avgTilt = avg(faceAnnotations.map(fa => Math.abs(fa.rollAngle)));
+        if (avgTilt > 15) { // 平均傾きが15度以上なら傾いていると判断
+            isFaceTilted = true;
+        }
+    } else {
+        // 3枚全てで顔が検出されなかった場合
+        detectionConfidence = 0.0;
+    }
+    
+    // 特徴量の計算
     const avgB = brightnessVals.length ? avg(brightnessVals) : 0.5;
     const varB = brightnessVals.length ? variance(brightnessVals, avgB) : 0.0;
-    const contrast = clamp01(varB * 3);
+    // 顔が傾いている場合、コントラストの信頼性が下がるため少し補正
+    const contrast = clamp01(varB * (isFaceTilted ? 2.5 : 3.0));
     const redness  = rRatios.length ? avg(rRatios) : 0.3;
     const texture  = clamp01(0.4 + 0.6 * contrast);
 
-    // 独自スコア（必要に応じて係数・閾値を後で調整）
-    const spots    = clamp01(0.6*(1-avgB) + 0.4*contrast);
-    const wrinkles = clamp01(0.4*(age||0)/80 + 0.6*contrast);
-    const sagging  = clamp01(0.5*(age||0)/80 + 0.5*(1-contrast));
-    const pores    = clamp01(0.7*texture + 0.3*contrast);
-    const redn     = clamp01(redness);
-    const to5 = x => x<0.2?1 : x<0.4?2 : x<0.6?3 : x<0.8?4 : 5;
+    // 元の0-1スコアを計算
+    const spots_raw    = clamp01(0.6*(1-avgB) + 0.4*contrast);
+    const wrinkles_raw = clamp01(0.4*(age||0)/80 + 0.6*contrast);
+    const sagging_raw  = clamp01(0.5*(age||0)/80 + 0.5*(1-contrast));
+    const pores_raw    = clamp01(0.7*texture + 0.3*contrast);
+    const redness_raw  = clamp01(redness);
 
+    // --- 変更点(4): 新しいスコア形式で最終結果を生成 ---
+    const scores = {
+      spots:    toNewScore(spots_raw),
+      wrinkles: toNewScore(wrinkles_raw),
+      sagging:  toNewScore(sagging_raw),
+      pores:    toNewScore(pores_raw),
+      redness:  toNewScore(redness_raw)
+    };
+    
+    const overallScore = Math.round(avg(Object.values(scores)));
+
+    // diagnose.js の末尾
     const result = {
-      age, sex,
-      features: { brightness: avgB, redness, texture, contrast },
       scores: {
-        spots_score: spots,
-        wrinkles_score: wrinkles,
-        sagging_score: sagging,
-        pores_score: pores,
-        redness_score: redn
+        overall: overallScore,
+        spots:    scores.spots,    // plan.jsと連携するため、キーをprice_book.jsonのカテゴリ名に合わせる
+        wrinkles: scores.wrinkles,
+        sagging:  scores.sagging,
+        pores:    scores.pores,
+        redness:  scores.redness
       },
-      grades: {
-        spots_grade: to5(spots),
-        wrinkles_grade: to5(wrinkles),
-        sagging_grade: to5(sagging),
-        pores_grade: to5(pores),
-        redness_grade: to5(redn)
+        analysis_info: { // 分析の信頼性に関する情報を追加
+          detection_confidence: detectionConfidence,
+          is_face_tilted: isFaceTilted,
       },
       comment: "※本結果は美容目的の参考評価です（診断ではありません）。対面での個別説明を推奨します。"
     };
@@ -82,13 +122,11 @@ exports.handler = async (event) => {
   }
 };
 
+// 補助関数 (変更なし)
 function resp(status, obj){
   return {
     statusCode: status,
-    headers: {
-      "Content-Type":"application/json",
-      "Access-Control-Allow-Origin":"*"
-    },
+    headers: { "Content-Type":"application/json", "Access-Control-Allow-Origin":"*" },
     body: JSON.stringify(obj)
   };
 }
