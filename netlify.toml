@@ -1,9 +1,10 @@
+netlify.toml（例）
+
 [build]
-  publish = "."
   functions = "netlify/functions"
 
 [functions]
   node_bundler = "esbuild"
 
 [build.environment]
-  NODE_VERSION = "18"   # or "20"
+  NODE_VERSION = "18"

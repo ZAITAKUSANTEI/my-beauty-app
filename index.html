@@ -1,779 +1,317 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI肌診断 & 美容プラン提案</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #4CAF50; /* Green */
-            --secondary-color: #FFC107; /* Amber */
-            --text-color: #333;
-            --light-bg: #f9f9f9;
-            --dark-bg: #2c3e50; /* Dark Blue Gray */
-            --card-bg: #fff;
-            --border-color: #ddd;
-            --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.05);
-            --shadow-medium: 0 6px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        body {
-            font-family: 'Noto Sans JP', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--light-bg);
-            color: var(--text-color);
-            line-height: 1.6;
-            scroll-behavior: smooth;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Montserrat', sans-serif;
-            color: var(--dark-bg);
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
-        }
-
-        header {
-            background-color: var(--dark-bg);
-            color: white;
-            padding: 1.5rem 1rem;
-            text-align: center;
-            box-shadow: var(--shadow-medium);
-        }
-        header h1 {
-            color: white;
-            font-size: 2.2rem;
-            margin: 0;
-        }
-        header p {
-            font-size: 1rem;
-            margin-top: 0.5rem;
-            opacity: 0.8;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 2rem auto;
-            padding: 0 1.5rem;
-        }
-
-        section {
-            background-color: var(--card-bg);
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            border-radius: 8px;
-            box-shadow: var(--shadow-light);
-        }
-
-        /* --- Input File Styles --- */
-        .file-upload-section {
-            text-align: center;
-        }
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            margin: 1rem 0;
-        }
-        .file-input-wrapper input[type=file] {
-            font-size: 100px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-        .file-input-wrapper .btn {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 12px 25px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.3s ease;
-        }
-        .file-input-wrapper .btn:hover {
-            background-color: #45a049;
-        }
-
-        .image-preview-container {
-            display: flex;
-            flex-wrap: wrap; /* モバイル対応 */
-            gap: 1.5rem;
-            justify-content: center;
-            margin-top: 1.5rem;
-        }
-        .image-preview-card {
-            background-color: var(--light-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            width: 300px; /* ある程度の固定幅 */
-            text-align: center;
-            box-shadow: var(--shadow-light);
-            transition: transform 0.2s ease-in-out;
-        }
-        .image-preview-card:hover {
-            transform: translateY(-5px);
-        }
-        .image-preview-card h3 {
-            margin-top: 0;
-            color: var(--primary-color);
-            font-size: 1.1rem;
-        }
-        .image-preview-card img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-            margin-bottom: 0.8rem;
-            border: 1px solid #eee;
-        }
-        .image-preview-card .placeholder {
-            width: 100%;
-            height: 180px;
-            background-color: #e9e9e9;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #aaa;
-            margin-bottom: 0.8rem;
-        }
-
-        .user-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-        }
-        .user-info label {
-            flex: 1;
-            min-width: 200px; /* モバイルでの表示調整 */
-        }
-        .user-info input[type="number"],
-        .user-info select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            font-size: 1rem;
-            box-sizing: border-box; /* paddingを含めて幅を計算 */
-        }
-
-        .btn-primary {
-            display: block;
-            width: fit-content;
-            margin: 2rem auto 0 auto;
-            background-color: var(--primary-color);
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-        .btn-primary:hover {
-            background-color: #45a049;
-            transform: translateY(-2px);
-        }
-        .btn-primary:disabled {
-            background-color: #a5d6a7;
-            cursor: not-allowed;
-        }
-
-        /* --- Loading Spinner --- */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            z-index: 1000;
-            display: none; /* 初期は非表示 */
-        }
-        .spinner {
-            border: 8px solid rgba(255, 255, 255, 0.3);
-            border-top: 8px solid var(--secondary-color);
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* --- Results Section --- */
-        #resultsSection {
-            display: none; /* 初期は非表示 */
-            text-align: center;
-        }
-        #resultsSection h2 {
-            color: var(--primary-color);
-        }
-
-        .score-display {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1.5rem;
-            margin-top: 2rem;
-            margin-bottom: 2rem;
-        }
-        .score-card {
-            background-color: var(--light-bg);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-light);
-            min-width: 180px;
-            flex: 1; 
-            max-width: 250px;
-            text-align: center;
-            position: relative;
-        }
-        .score-card h3 {
-            color: var(--dark-bg);
-            margin-top: 0;
-            font-size: 1.2rem;
-        }
-        .score-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            margin: 0.5rem 0;
-            display: block;
-        }
-        .score-desc {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 1rem;
-            text-align: left;
-        }
-        .score-card.overall {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 2rem;
-            box-shadow: var(--shadow-medium);
-        }
-        .score-card.overall h3, .score-card.overall .score-value {
-            color: white;
-        }
-        .score-card.overall .score-value {
-            font-size: 3.5rem;
-        }
-
-        .radar-chart-container {
-            width: 100%;
-            max-width: 500px;
-            margin: 2rem auto;
-            background-color: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: var(--shadow-light);
-        }
-
-        .treatment-plans {
-            margin-top: 2rem;
-            text-align: left;
-        }
-        .plan-card {
-            background-color: var(--light-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-light);
-        }
-        .plan-card h3 {
-            color: var(--secondary-color);
-            margin-top: 0;
-            font-size: 1.3rem;
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .plan-card h4 {
-            color: var(--dark-bg);
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-        .plan-card ul {
-            list-style: none;
-            padding: 0;
-            margin: 0.8rem 0;
-        }
-        .plan-card li {
-            background-color: var(--card-bg);
-            border: 1px solid #eee;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .plan-card li strong {
-            color: var(--primary-color);
-        }
-        .plan-card .plan-total {
-            text-align: right;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--dark-bg);
-            margin-top: 1.5rem;
-            padding-top: 1rem;
-            border-top: 1px dashed var(--border-color);
-        }
-
-        .disclaimer {
-            font-size: 0.9rem;
-            color: #777;
-            margin-top: 3rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border-color);
-            text-align: center;
-        }
-        .disclaimer strong {
-            color: var(--primary-color);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            margin-top: 3rem;
-            background-color: var(--dark-bg);
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
-        }
-
-        /* --- Utility Classes --- */
-        .text-center { text-align: center; }
-        .hidden { display: none !important; }
-
-        /* --- Responsive Design --- */
-        @media (max-width: 768px) {
-            header h1 { font-size: 1.8rem; }
-            .container { margin: 1rem auto; padding: 0 1rem; }
-            section { padding: 1.5rem; }
-            .image-preview-card { width: 100%; max-width: 350px; margin-left: auto; margin-right: auto; }
-            .score-display { flex-direction: column; align-items: center; }
-            .score-card { width: 90%; max-width: 300px; }
-            .score-card.overall .score-value { font-size: 3rem; }
-            .radar-chart-container { padding: 1rem; }
-            .plan-card h3 { font-size: 1.2rem; }
-        }
-        @media (max-width: 480px) {
-            header h1 { font-size: 1.5rem; }
-            .btn-primary { padding: 12px 25px; font-size: 1rem; }
-            .file-input-wrapper .btn { padding: 10px 20px; font-size: 0.9rem; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI肌診断 & 美容プラン提案（2段階実行）</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --primary:#4CAF50; --secondary:#FFC107; --ink:#222; --muted:#666; --card:#fff; --bg:#f6f7fb; --danger:#e53935;
+    }
+    *{box-sizing:border-box}
+    body{font-family:"Noto Sans JP",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1100px;margin:40px auto;padding:0 16px}
+    .hero h1{font-size:28px;margin:0 0 8px}
+    .hero p{margin:0;color:var(--muted)}
+    .grid{display:grid;gap:16px}
+    @media(min-width:960px){.grid-2{grid-template-columns:1.1fr .9fr}}
+    .card{background:var(--card);border-radius:16px;box-shadow:0 8px 24px rgba(25,28,33,.06);padding:20px}
+    .label{font-weight:700;font-size:14px;margin-bottom:8px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .uploader{border:1.5px dashed #cbd5e1;border-radius:14px;padding:14px;flex:1;min-width:200px;background:#fbfcff}
+    .uploader input{width:100%}
+    .preview{margin-top:10px;aspect-ratio:1/1;border-radius:10px;background:#eef1f7;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .preview img{max-width:100%;max-height:100%;display:block}
+    .inline{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    input[type="number"],select{padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;font:inherit}
+    button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-secondary{background:var(--secondary);color:#222}
+    .btn-ghost{background:#eef1f7;color:#222}
+    .btn-danger{background:var(--danger);color:#fff}
+    .btn:disabled,.btn[disabled]{opacity:.55;cursor:not-allowed}
+    .muted{color:var(--muted);font-size:13px}
+    .result h3{margin:0 0 8px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;background:#eef1f7}
+    .scoreRow{display:grid;grid-template-columns:120px 1fr 70px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f0f2f7}
+    progress{width:100%;height:10px}
+    .hidden{display:none}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111;color:#fff;padding:10px 14px;border-radius:10px;opacity:.95}
+  </style>
 </head>
 <body>
-    <header>
-        <h1>AI肌診断 & 美容プラン提案</h1>
-        <p>あなたの肌状態をAIが分析し、最適な美容治療プランをご提案します。</p>
-    </header>
-
-    <main class="container">
-        <section id="uploadSection">
-            <h2>STEP 1: お顔の写真をアップロードしてください</h2>
-            <p class="text-center">正確な診断のため、以下の3枚の写真が必要です。<br>正面、明るい場所で撮影してください。</p>
-
-            <div class="image-preview-container">
-                <div class="image-preview-card">
-                    <h3>正面の写真</h3>
-                    <div class="placeholder" id="preview-placeholder-0">画像をアップロード</div>
-                    <img id="image-preview-0" src="" alt="正面の写真プレビュー" class="hidden">
-                    <div class="file-input-wrapper">
-                        <button class="btn">写真を選択</button>
-                        <input type="file" accept="image/*" data-index="0" onchange="handleImageUpload(event, 0)">
-                    </div>
-                </div>
-                <div class="image-preview-card">
-                    <h3>目を閉じた写真</h3>
-                    <div class="placeholder" id="preview-placeholder-1">画像をアップロード</div>
-                    <img id="image-preview-1" src="" alt="目を閉じた写真プレビュー" class="hidden">
-                    <div class="file-input-wrapper">
-                        <button class="btn">写真を選択</button>
-                        <input type="file" accept="image/*" data-index="1" onchange="handleImageUpload(event, 1)">
-                    </div>
-                </div>
-                <div class="image-preview-card">
-                    <h3>笑顔の写真</h3>
-                    <div class="placeholder" id="preview-placeholder-2">画像をアップロード</div>
-                    <img id="image-preview-2" src="" alt="笑顔の写真プレビュー" class="hidden">
-                    <div class="file-input-wrapper">
-                        <button class="btn">写真を選択</button>
-                        <input type="file" accept="image/*" data-index="2" onchange="handleImageUpload(event, 2)">
-                    </div>
-                </div>
-            </div>
-
-            <h2 style="margin-top: 3rem;">STEP 2: あなたの情報を入力してください</h2>
-            <div class="user-info">
-                <label>
-                    年齢:
-                    <input type="number" id="ageInput" value="30" min="18" max="99">
-                </label>
-                <label>
-                    性別:
-                    <select id="sexInput">
-                        <option value="female">女性</option>
-                        <option value="male">男性</option>
-                        <option value="other">その他</option>
-                    </select>
-                </label>
-            </div>
-
-            <button id="diagnoseButton" class="btn-primary" disabled>AI肌診断を開始</button>
-        </section>
-
-        <section id="resultsSection" class="hidden">
-            <h2>診断結果</h2>
-            <p class="text-center">あなたの肌の現在地を把握し、未来の美しさへの一歩を踏み出しましょう。</p>
-
-            <div class="score-display">
-                <div class="score-card overall">
-                    <h3>総合美肌スコア</h3>
-                    <span id="overallScore" class="score-value">--</span>
-                    <p class="score-desc" id="overallComment"></p>
-                </div>
-                <div class="score-card">
-                    <h3>シミ・透明感</h3>
-                    <span id="spotsScore" class="score-value">--</span>
-                    <p class="score-desc" id="spotsDesc"></p>
-                </div>
-                <div class="score-card">
-                    <h3>シワ・なめらかさ</h3>
-                    <span id="wrinklesScore" class="score-value">--</span>
-                    <p class="score-desc" id="wrinklesDesc"></p>
-                </div>
-                <div class="score-card">
-                    <h3>たるみ・ハリ</h3>
-                    <span id="saggingScore" class="score-value">--</span>
-                    <p class="score-desc" id="saggingDesc"></p>
-                </div>
-                <div class="score-card">
-                    <h3>毛穴・キメ</h3>
-                    <span id="poresScore" class="score-value">--</span>
-                    <p class="score-desc" id="poresDesc"></p>
-                </div>
-                <div class="score-card">
-                    <h3>赤み・色ムラ</h3>
-                    <span id="rednessScore" class="score-value">--</span>
-                    <p class="score-desc" id="rednessDesc"></p>
-                </div>
-            </div>
-
-            <div class="radar-chart-container">
-                <h3>肌スコアレーダーチャート</h3>
-                <canvas id="skinRadarChart"></canvas>
-            </div>
-
-            <div class="treatment-plans">
-                <h2>あなたへのおすすめ美容プラン</h2>
-                <p class="text-center">AIがあなたの診断結果を元に、最適なプランをご提案します。</p>
-                <div id="planContainer"></div>
-            </div>
-
-            <p class="disclaimer"><strong>※本結果は美容目的の参考評価です。医療行為を行うものではありません。</strong><br>個別の治療方針については、必ず専門医にご相談ください。</p>
-        </section>
-    </main>
-
-    <div class="loading-overlay hidden" id="loadingOverlay">
-        <div class="spinner"></div>
-        <p id="loadingMessage">肌データを分析中...</p>
+  <div class="wrap">
+    <div class="hero">
+      <h1>AI肌診断 & 美容プラン提案</h1>
+      <p>①写真3枚・年齢・性別を入力 → <b>診断</b> → ②結果をもとに <b>治療プラン生成</b> の2段階</p>
     </div>
 
-    <footer>
-        <p>&copy; 2025 AI Beauty App. All rights reserved.</p>
-    </footer>
+    <div class="grid grid-2">
+      <!-- 左：入力 -->
+      <section class="card">
+        <div class="label">写真アップロード（正面・右・左）</div>
+        <div class="row">
+          <div class="uploader">
+            <div class="muted">正面</div>
+            <input type="file" accept="image/*" id="img0" />
+            <div class="preview" id="preview0"><span class="muted">プレビュー</span></div>
+          </div>
+          <div class="uploader">
+            <div class="muted">右</div>
+            <input type="file" accept="image/*" id="img1" />
+            <div class="preview" id="preview1"><span class="muted">プレビュー</span></div>
+          </div>
+          <div class="uploader">
+            <div class="muted">左</div>
+            <input type="file" accept="image/*" id="img2" />
+            <div class="preview" id="preview2"><span class="muted">プレビュー</span></div>
+          </div>
+        </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // API エンドポイント
-        const DIAGNOSE_API_URL = '/.netlify/functions/diagnose';
-        const PLAN_API_URL = '/.netlify/functions/plan';
+        <div style="height:12px"></div>
+        <div class="inline">
+          <label class="label" style="margin:0">年齢</label>
+          <input type="number" id="ageInput" min="10" max="100" step="1" value="40" style="width:100px">
+          <label class="label" style="margin:0 0 0 14px">性別</label>
+          <select id="sexInput">
+            <option value="女性">女性</option>
+            <option value="男性">男性</option>
+            <option value="その他/無回答">その他/無回答</option>
+          </select>
+        </div>
 
-        let uploadedImages = [null, null, null];
-        const imagePreviews = [
-            document.getElementById('image-preview-0'),
-            document.getElementById('image-preview-1'),
-            document.getElementById('image-preview-2')
-        ];
-        const placeholders = [
-            document.getElementById('preview-placeholder-0'),
-            document.getElementById('preview-placeholder-1'),
-            document.getElementById('preview-placeholder-2')
-        ];
-        const diagnoseButton = document.getElementById('diagnoseButton');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingMessage = document.getElementById('loadingMessage');
-        const resultsSection = document.getElementById('resultsSection');
-        const planContainer = document.getElementById('planContainer');
+        <div style="height:12px"></div>
+        <div class="inline">
+          <button id="diagnoseButton" class="btn-primary">① 診断する</button>
+          <button id="planButton" class="btn-secondary" disabled>② 治療プランを生成</button>
+          <button id="resetButton" class="btn-ghost">リセット</button>
+        </div>
+        <div class="muted" id="hint">※ 3枚すべての写真が必要です。診断が成功すると②ボタンが有効になります。</div>
+      </section>
 
-        let skinRadarChart;
+      <!-- 右：結果 -->
+      <section class="card result">
+        <h3>診断結果</h3>
+        <div id="diagnoseBox" class="muted">まだ診断していません。</div>
+        <div id="scoresBox" class="hidden"></div>
 
-        const scoreCategories = {
-            overall: { name: "総合美肌スコア", desc: "あなたの肌全体の状態を示す総合的な指標です。バランスの取れたケアで美しさを維持しましょう。" },
-            spots:   { name: "シミ・透明感", desc: "肌の色ムラやシミの現れやすさを示します。高いほど透明感のある均一な肌です。", ideal: "高い透明感、均一な肌" },
-            wrinkles:{ name: "シワ・なめらかさ", desc: "肌の表面の滑らかさと弾力性を評価します。高いほど小ジワが少なく、ハリがあります。", ideal: "小ジワが少なく滑らか" },
-            sagging: { name: "たるみ・ハリ", desc: "肌の弾力とリフトアップの状態を示します。高いほどフェイスラインが引き締まっています。", ideal: "引き締まったフェイスライン" },
-            pores:   { name: "毛穴・キメ", desc: "毛穴の目立ちにくさと肌のキメの細かさを示します。高いほどキメが整い、毛穴が目立ちません。", ideal: "キメが整い毛穴が目立たない" },
-            redness: { name: "赤み・色ムラ", desc: "肌の赤みや炎症の傾向、色ムラの少なさを示します。高いほど鎮静され均一な肌色です。", ideal: "均一な肌色、赤みなし" }
-        };
+        <div style="height:20px"></div>
+        <h3>治療提案</h3>
+        <div id="planBox" class="muted">診断後に生成できます。</div>
+      </section>
+    </div>
+  </div>
 
-        function handleImageUpload(event, index) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    imagePreviews[index].src = e.target.result;
-                    imagePreviews[index].classList.remove('hidden');
-                    placeholders[index].classList.add('hidden');
-                    uploadedImages[index] = e.target.result.split(',')[1];
-                    checkAllImagesUploaded();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+  <div id="toast" class="toast hidden"></div>
 
-        function checkAllImagesUploaded() {
-            const allUploaded = uploadedImages.every(img => img !== null);
-            diagnoseButton.disabled = !allUploaded;
-        }
+  <script>
+    const DIAGNOSIS_API = "/.netlify/functions/diagnosis";
+    const PLAN_API      = "/.netlify/functions/plan";
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ このブロックが前回抜け落ちていました ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        diagnoseButton.addEventListener('click', async () => {
-            showLoading('肌データを分析中...');
+    const imgEls = [document.getElementById("img0"), document.getElementById("img1"), document.getElementById("img2")];
+    const previewEls = [document.getElementById("preview0"), document.getElementById("preview1"), document.getElementById("preview2")];
+    const ageEl = document.getElementById("ageInput");
+    const sexEl = document.getElementById("sexInput");
+    const diagnoseBtn = document.getElementById("diagnoseButton");
+    const planBtn = document.getElementById("planButton");
+    const resetBtn = document.getElementById("resetButton");
 
-            const age = document.getElementById('ageInput').value;
-            const sex = document.getElementById('sexInput').value;
+    const diagnoseBox = document.getElementById("diagnoseBox");
+    const scoresBox = document.getElementById("scoresBox");
+    const planBox = document.getElementById("planBox");
+    const toast = document.getElementById("toast");
 
-            try {
-                // STEP 1: 肌診断 API を呼び出す
-                const diagnoseResponse = await fetch(DIAGNOSE_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        images_b64: uploadedImages,
-                        age: parseInt(age),
-                        sex: sex
-                    })
-                });
+    let imagesB64 = [null,null,null];
+    let latestDiagnosis = null; // {scores, grades, overall, notes...}
 
-                if (!diagnoseResponse.ok) {
-                    const errorData = await diagnoseResponse.json();
-                    throw new Error(`診断エラー: ${errorData.error || diagnoseResponse.statusText}`);
-                }
-                const diagnoseData = await diagnoseResponse.json();
-                
-                displayDiagnosisResults(diagnoseData.scores, diagnoseData.analysis_info);
+    imgEls.forEach((input, idx) => {
+      input.addEventListener("change", async (e) => {
+        const f = e.target.files?.[0];
+        if(!f){ imagesB64[idx]=null; previewEls[idx].innerHTML='<span class="muted">プレビュー</span>'; updateButtons(); return; }
+        const b64 = await fileToBase64(f);
+        imagesB64[idx] = b64.replace(/^data:image\/[a-zA-Z+]+;base64,/, "");
+        const img = document.createElement("img");
+        img.src = "data:"+ (f.type || "image/jpeg") +";base64," + imagesB64[idx];
+        previewEls[idx].innerHTML=""; previewEls[idx].appendChild(img);
+        updateButtons();
+      });
+    });
 
-                // STEP 2: 美容プラン API を呼び出す
-                showLoading('あなたに最適なプランを生成中...');
-                const planResponse = await fetch(PLAN_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        age: parseInt(age),
-                        sex: sex,
-                        scores: diagnoseData.scores
-                    })
-                });
+    resetBtn.addEventListener("click", () => {
+      imagesB64=[null,null,null];
+      imgEls.forEach((el,i)=>{el.value=""; previewEls[i].innerHTML='<span class="muted">プレビュー</span>';});
+      latestDiagnosis=null;
+      diagnoseBox.textContent="まだ診断していません。";
+      scoresBox.classList.add("hidden"); scoresBox.innerHTML="";
+      planBox.textContent="診断後に生成できます。";
+      planBtn.disabled = true;
+      toastify("初期化しました");
+    });
 
-                if (!planResponse.ok) {
-                    const errorData = await planResponse.json();
-                    throw new Error(`プラン生成エラー: ${errorData.error || planResponse.statusText}`);
-                }
-                const planData = await planResponse.json();
-                
-                displayTreatmentPlans(planData);
+    diagnoseBtn.addEventListener("click", async () => {
+      const filled = imagesB64.filter(Boolean).length;
+      if(filled<3){ alert("写真は3枚すべてアップロードしてください。"); return; }
 
-                hideLoading();
-                resultsSection.classList.remove('hidden');
-                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+      const age = Number(ageEl.value||"0"); const sex = sexEl.value||"";
+      if(!age||age<10){ alert("年齢を正しく入力してください。"); return; }
 
-            } catch (error) {
-                console.error('診断またはプラン生成中にエラーが発生しました:', error);
-                alert(`エラーが発生しました: ${error.message}\nもう一度お試しください。`);
-                hideLoading();
-            }
+      setBusy(diagnoseBtn,true,"解析中…");
+      try{
+        console.log("[UI] Diagnose clicked.", {age,sex,imgs:imagesB64.map(x=>!!x)});
+        const res = await fetch(DIAGNOSIS_API, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ images_b64: imagesB64, age, sex })
         });
-
-        function displayDiagnosisResults(scores, analysisInfo) {
-            document.getElementById('overallScore').textContent = scores.overall;
-            document.getElementById('spotsScore').textContent = scores.spots;
-            document.getElementById('wrinklesScore').textContent = scores.wrinkles;
-            document.getElementById('saggingScore').textContent = scores.sagging;
-            document.getElementById('poresScore').textContent = scores.pores;
-            document.getElementById('rednessScore').textContent = scores.redness;
-
-            document.getElementById('overallComment').innerHTML = getOverallComment(scores.overall);
-            document.getElementById('spotsDesc').innerHTML = getScoreDescription('spots', scores.spots, analysisInfo);
-            document.getElementById('wrinklesDesc').innerHTML = getScoreDescription('wrinkles', scores.wrinkles, analysisInfo);
-            document.getElementById('saggingDesc').innerHTML = getScoreDescription('sagging', scores.sagging, analysisInfo);
-            document.getElementById('poresDesc').innerHTML = getScoreDescription('pores', scores.pores, analysisInfo);
-            document.getElementById('rednessDesc').innerHTML = getScoreDescription('redness', scores.redness, analysisInfo);
-
-            updateRadarChart(scores);
+        if(!res.ok){
+          const t = await safeText(res); console.warn("Diagnosis NG", res.status, t);
+          throw new Error("診断APIエラー: "+res.status);
         }
+        const data = await res.json();
+        console.log("[API] diagnosis OK", data);
+        latestDiagnosis = data;
+        renderDiagnosis(data);
+        planBtn.disabled = false;
+        toastify("診断が完了しました。②へ進めます。");
+      }catch(e){
+        console.error(e);
+        alert("診断に失敗しました。ネットワーク/環境変数/Nodeバージョンを確認してください。");
+      }finally{
+        setBusy(diagnoseBtn,false,"① 診断する");
+      }
+    });
 
-        function getOverallComment(score) {
-            if (score >= 85) return "素晴らしいです！非常に健康的で美しい肌状態を保っています。この調子で維持していきましょう！";
-            if (score >= 70) return "良好な肌状態です！日々のケアが実を結んでいます。更なる高みを目指しましょう。";
-            if (score >= 50) return "平均的な肌状態です。少しの意識とケアで、もっと美しくなれます。";
-            return "肌トラブルの兆候が見られます。この機会に集中的なケアを検討してみませんか？";
-        }
+    planBtn.addEventListener("click", async () => {
+      if(!latestDiagnosis){ alert("先に診断を実行してください。"); return; }
+      const age = Number(ageEl.value||"0"); const sex = sexEl.value||"";
+      const payload = {
+        age, sex,
+        concerns: guessConcerns(latestDiagnosis),
+        scores: latestDiagnosis?.scores || {},
+        grades: latestDiagnosis?.grades || {},
+        extraNote: latestDiagnosis?.notes || ""
+      };
 
-        function getScoreDescription(category, score, analysisInfo) {
-            const { name, desc, ideal } = scoreCategories[category];
-            let comment = `<strong>${name}スコア: ${score}点</strong><br>${desc}`;
-
-            if (score >= 80) comment += `<br>非常に良好です！${ideal}な状態を保っています。`;
-            else if (score >= 60) comment += `<br>良好な状態です。さらなる改善も期待できます。`;
-            else if (score >= 40) comment += `<br>平均よりやや低めです。この項目に特化したケアを検討してみましょう。`;
-            else comment += `<br>改善の余地が大きい項目です。集中的なケアをおすすめします。`;
-            
-            if (analysisInfo && analysisInfo.detection_confidence < 0.7) comment += `<br><small>※顔の検出精度が低かったため、診断の信頼性に影響がある可能性があります。</small>`;
-            if (analysisInfo && analysisInfo.is_face_tilted) comment += `<br><small>※写真に顔の傾きが見られたため、正確な分析が難しい箇所がありました。</small>`;
-            
-            return comment;
-        }
-
-        function updateRadarChart(scores) {
-            const labels = [
-                scoreCategories.spots.name, scoreCategories.wrinkles.name, scoreCategories.sagging.name,
-                scoreCategories.pores.name, scoreCategories.redness.name
-            ];
-            const data = [
-                scores.spots, scores.wrinkles, scores.sagging, scores.pores, scores.redness
-            ];
-            const ctx = document.getElementById('skinRadarChart').getContext('2d');
-
-            if (skinRadarChart) {
-                skinRadarChart.data.datasets[0].data = data;
-                skinRadarChart.update();
-            } else {
-                skinRadarChart = new Chart(ctx, {
-                    type: 'radar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'あなたの肌スコア',
-                            data: data,
-                            backgroundColor: 'rgba(75, 192, 192, 0.4)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 2,
-                            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                            pointBorderColor: '#fff',
-                            pointHoverBackgroundColor: '#fff',
-                            pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
-                        }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: true,
-                        scales: {
-                            r: {
-                                angleLines: { display: true, color: '#eee' },
-                                grid: { color: '#eee' },
-                                pointLabels: {
-                                    font: { size: window.innerWidth > 768 ? 14 : 10, family: 'Noto Sans JP' },
-                                    color: '#2c3e50'
-                                },
-                                suggestedMin: 30,
-                                suggestedMax: 100,
-                                ticks: { stepSize: 10, backdropColor: 'rgba(255, 255, 255, 0.7)', color: '#666' }
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) { return (context.dataset.label || '') + ': ' + Math.round(context.parsed.r) + '点'; }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        function displayTreatmentPlans(planData) {
-            planContainer.innerHTML = '';
-            const planLevels = [
-                { key: 'light',      title: 'ライトプラン' },
-                { key: 'standard',   title: 'スタンダードプラン' },
-                { key: 'aggressive', title: 'アグレッシブプラン' }
-            ];
-
-            planLevels.forEach(level => {
-                if (planData[level.key] && planData[level.key].length > 0) {
-                    const treatments = planData[level.key];
-                    const planCard = document.createElement('div');
-                    planCard.classList.add('plan-card');
-                    let treatmentsHtml = '<ul>';
-                    let totalCost = 0;
-
-                    treatments.forEach(treatment => {
-                        const price = treatment.price_jpy || 0;
-                        const sessions = treatment.sessions || 1;
-                        const total = price * sessions;
-                        treatmentsHtml += `<li><span>${treatment.name} (${sessions}${treatment.unit})</span><strong>${total.toLocaleString()}円</strong></li>`;
-                        totalCost += total;
-                    });
-                    treatmentsHtml += '</ul>';
-
-                    const reasonHtml = treatments.map(t => t.reason).filter(r => r).map(r => `<li>${r}</li>`).join('');
-
-                    planCard.innerHTML = `
-                        <h3>${level.title}</h3>
-                        <h4>提案理由:</h4>
-                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 0.9em;">${reasonHtml || '<li>総合的なスコアバランスを考慮して選定しました。</li>'}</ul>
-                        <h4>おすすめ施術内容:</h4>
-                        ${treatmentsHtml}
-                        <p class="plan-total">合計費用目安: ${totalCost.toLocaleString()}円</p>`;
-                    planContainer.appendChild(planCard);
-                }
-            });
-
-            if (planData.notes) {
-                const notesEl = document.createElement('div');
-                notesEl.className = 'plan-card';
-                notesEl.innerHTML = `<h3>補足事項</h3><p>${planData.notes.replace(/\n/g, '<br>')}</p>`;
-                planContainer.appendChild(notesEl);
-            }
-        }
-
-        function showLoading(message) {
-            loadingMessage.textContent = message;
-            loadingOverlay.classList.remove('hidden');
-        }
-
-        function hideLoading() {
-            loadingOverlay.classList.add('hidden');
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAllImagesUploaded();
+      setBusy(planBtn,true,"生成中…");
+      try{
+        console.log("[UI] Plan clicked.", payload);
+        const res = await fetch(PLAN_API, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
         });
-    </script>
+        if(!res.ok){
+          const t = await safeText(res); console.warn("Plan NG", res.status, t);
+          throw new Error("プランAPIエラー: "+res.status);
+        }
+        const data = await res.json();
+        console.log("[API] plan OK", data);
+        renderPlan(data);
+        toastify("治療プランを生成しました。");
+      }catch(e){
+        console.error(e);
+        alert("治療プラン生成に失敗しました。OPENAIキー/JSON出力を確認してください。");
+      }finally{
+        setBusy(planBtn,false,"② 治療プランを生成");
+      }
+    });
+
+    function renderDiagnosis(d){
+      const { overallScore, grades={}, scores={} } = d || {};
+      diagnoseBox.innerHTML = `
+        <div class="inline" style="gap:8px">
+          <span class="badge">総合</span>
+          <b style="font-size:18px">${overallScore ?? "-"}</b>
+        </div>
+        <div class="muted">グレード: ${grades?.overall ?? "-"}</div>
+      `;
+      const rows = [
+        ["シミ", scores.spots],
+        ["シワ", scores.wrinkles],
+        ["たるみ", scores.sagging],
+        ["毛穴/質感", scores.pores],
+        ["赤み", scores.redness],
+      ];
+      scoresBox.classList.remove("hidden");
+      scoresBox.innerHTML = rows.map(([label,val])=>{
+        const pct = Math.max(0, Math.min(100, Number(val||0)));
+        return `
+          <div class="scoreRow">
+            <div>${label}</div>
+            <div><progress max="100" value="${pct}"></progress></div>
+            <div style="text-align:right">${pct}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderPlan(plan){
+      // 期待フォーマット: { light:{title,items[],note?,est_price?}, standard:{...}, aggressive:{...}, notes? }
+      if(!plan || (!plan.light && !plan.standard && !plan.aggressive)){
+        planBox.innerHTML = '<span class="muted">JSONの解釈に失敗しました。</span>';
+        return;
+      }
+      const b = [];
+      ["light","standard","aggressive"].forEach(key=>{
+        const p = plan[key]; if(!p) return;
+        b.push(`
+          <div class="card" style="background:#fafbff;border:1px solid #eef1f7;margin-bottom:12px">
+            <div class="inline" style="justify-content:space-between">
+              <h4 style="margin:0">${p.title || (key==="light"?"ライト":key==="standard"?"スタンダード":"アグレッシブ")}</h4>
+              ${p.est_price ? `<span class="badge">目安: ${p.est_price.toLocaleString()}円</span>` : ""}
+            </div>
+            <div style="height:8px"></div>
+            <ul style="margin:0 0 0 16px;padding:0">
+              ${(p.items||[]).map(it=>`<li>${escapeHtml(it)}</li>`).join("")}
+            </ul>
+            ${p.note?`<div class="muted" style="margin-top:8px">${escapeHtml(p.note)}</div>`:""}
+          </div>
+        `);
+      });
+      if(plan.notes){ b.push(`<div class="muted">${escapeHtml(plan.notes)}</div>`); }
+      planBox.innerHTML = b.join("");
+    }
+
+    function updateButtons(){
+      const ok = imagesB64.filter(Boolean).length===3;
+      diagnoseBtn.disabled = !ok;
+      if(!ok){ planBtn.disabled = true; }
+    }
+    updateButtons();
+
+    function guessConcerns(diag){
+      // シンプルに下位2項目を気になる点として返す
+      const s = diag?.scores || {};
+      const sorted = Object.entries(s).sort((a,b)=>a[1]-b[1]); // 低スコア=悩み
+      return sorted.slice(0,2).map(([k])=>k);
+    }
+
+    function setBusy(btn,flag,labelWhenDone){
+      if(flag){
+        btn.dataset._label = btn.textContent;
+        btn.textContent="処理中…";
+        btn.disabled = true;
+      }else{
+        btn.textContent = labelWhenDone || btn.dataset._label || "完了";
+        btn.disabled = false;
+      }
+    }
+
+    function toastify(msg){
+      toast.textContent = msg;
+      toast.classList.remove("hidden");
+      setTimeout(()=>toast.classList.add("hidden"), 2000);
+    }
+
+    async function fileToBase64(file){
+      const buf = await file.arrayBuffer();
+      const bin = new Uint8Array(buf);
+      let s = ""; for (let i=0;i<bin.length;i++){ s += String.fromCharCode(bin[i]); }
+      return "data:"+ (file.type||"image/jpeg") +";base64," + btoa(s);
+    }
+    async function safeText(res){ try{ return await res.text(); } catch{ return ""; } }
+    function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+  </script>
 </body>
 </html>
